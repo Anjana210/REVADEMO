@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    /* --- Base & Variables --- */
+    :root {
+      --bg-dark: #0F172A;
+      --bg-light: #1E293B;
+      --text-primary: #CBD5E1;
+      --text-secondary: #94A3B8;
+      --accent: #38BDF8;
+      --table-border: #334155;
+      --hover-bg: rgba(255, 255, 255, 0.03);
+    }
+
+    [data-theme="light"] {
+      --bg-dark: #F8FAFC;
+      --bg-light: #FFFFFF;
+      --text-primary: #1F2937;
+      --text-secondary: #4B5563;
+      --accent: #0284C7;
+      --table-border: #E5E7EB;
+      --hover-bg: rgba(0, 0, 0, 0.03);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      margin: 0;
+      display: flex;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* --- Sidebar --- */
+    .sidebar {
+      width: 250px;
+      background-color: var(--bg-light);
+      padding: 1.5em;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: background-color 0.3s;
+    }
+
+    .sidebar-header {
+      font-size: 1.5em;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 2em;
+    }
+
+    .sidebar-nav ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: 8px;
+      transition: background-color 0.2s, color 0.2s;
+      font-weight: 500;
+    }
+
+    .sidebar-nav a:hover {
+      background-color: var(--hover-bg);
+      color: var(--text-primary);
+    }
+
+    .sidebar-nav a.active {
+      background-color: var(--accent);
+      color: var(--bg-dark);
+    }
+
+    .sidebar-nav a .fa-fw {
+      width: 20px;
+      text-align: center;
+    }
+
+    /* --- Main Content --- */
+    .main-content {
+      flex-grow: 1;
+      padding: 1.5em;
+      overflow-y: auto;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2em;
+    }
+
+    h1 {
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5em;
+    }
+
+    /* --- Theme Toggle --- */
+    .theme-toggle {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.2em;
+      cursor: pointer;
+      padding: 0.5em;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+    }
+
+    .theme-toggle:hover {
+      background-color: var(--hover-bg);
+    }
+
+    /* --- User Dropdown --- */
+    .user-dropdown {
+      position: relative;
+    }
+
+    .dropdown-toggle {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 1em;
+      padding: 0.5em 0.75em;
+      border-radius: 8px;
+      transition: background-color 0.2s;
+    }
+
+    .dropdown-toggle:hover {
+      background-color: var(--hover-bg);
+    }
+
+    .dropdown-toggle span {
+      font-weight: 600;
+    }
+
+    .dropdown-toggle .fa-chevron-down {
+      font-size: 0.8em;
+      transition: transform 0.2s ease-in-out;
+    }
+
+    .user-dropdown.open .fa-chevron-down {
+      transform: rotate(180deg);
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      background-color: var(--bg-light);
+      min-width: 160px;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      border: 1px solid var(--table-border);
+      border-radius: 8px;
+      z-index: 1;
+      overflow: hidden;
+      padding: 0.5em 0;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      color: var(--text-secondary);
+      padding: 10px 15px;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95em;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--hover-bg);
+      color: var(--text-primary);
+    }
+
+    /* --- Card & Iframe Wrapper --- */
+    .card {
+      background-color: var(--bg-light);
+      padding: 0;
+      border-radius: 12px;
+      height: calc(100vh - 100px); /* Fill screen minus header */
+      position: relative;
+      overflow: hidden;
+    }
+
+    .iframe-wrapper {
+      position: absolute;
+      top: -40px;      
+      bottom: -40px;   
+      left: 0;
+      right: 0;
+      overflow: hidden;
+      height: calc(100% + 100px);
+    }
+
+    .iframe-wrapper iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">Revartix Platform</div>
+    <div class="sidebar-nav">
+      <ul>
+        <li><a href="#" class="active"><i class="fa-solid fa-fw fa-chart-pie"></i> Reports</a></li>
+        <li><a href="#"><i class="fa-solid fa-fw fa-gear"></i> Settings</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <header class="header">
+      <h1>Dashboard</h1>
+      <div class="header-right">
+        <% if (user) { %>
+          <div class="user-dropdown" id="user-dropdown">
+            <button class="dropdown-toggle" id="dropdown-toggle" aria-haspopup="true" aria-expanded="false">
+              <span><%= user.name %></span>
+              <i class="fas fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div class="dropdown-menu" id="dropdown-menu">
+              <a href="/logout" class="dropdown-item">
+                <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                <span>Logout</span>
+              </a>
+            </div>
+          </div>
+        <% } %>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Theme">
+          <i class="fas fa-moon" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Dashboard Card -->
+    <section class="card">
+      <div class="iframe-wrapper">
+        <iframe 
+          src="http://localhost:3000/public-dashboards/06e4035d72ae479fb65d30ba7edb72d6?theme=dark"
+          id="embedded-dashboard">
+        </iframe>
+      </div>
+    </section>
+  </main>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const iframe = document.getElementById('embedded-dashboard');
+      const themeButton = document.getElementById('theme-toggle');
+      const themeIcon = themeButton.querySelector('i');
+      const htmlEl = document.documentElement;
+
+      // Apply theme to page & iframe
+      function applyTheme(theme) {
+        htmlEl.setAttribute('data-theme', theme);
+        themeIcon.className = theme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+        localStorage.setItem('theme', theme);
+
+        // Update Grafana iframe
+        if (iframe) {
+          const baseUrl = "http://localhost:3000/public-dashboards/06e4035d72ae479fb65d30ba7edb72d6";
+          iframe.src = `${baseUrl}?theme=${theme}`;
+        }
+      }
+
+      // Initialize theme
+      const currentTheme = localStorage.getItem('theme') || 'dark';
+      applyTheme(currentTheme);
+
+      // Theme toggle click
+      themeButton.addEventListener('click', () => {
+        const newTheme = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        applyTheme(newTheme);
+      });
+
+      // User dropdown
+      function setupUserDropdown() {
+        const dropdown = document.getElementById('user-dropdown');
+        if (!dropdown) return;
+
+        const toggle = dropdown.querySelector('#dropdown-toggle');
+        const menu = dropdown.querySelector('#dropdown-menu');
+
+        toggle.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const isExpanded = menu.classList.toggle('show');
+          dropdown.classList.toggle('open');
+          toggle.setAttribute('aria-expanded', isExpanded);
+        });
+
+        document.addEventListener('click', () => {
+          if (menu.classList.contains('show')) {
+            menu.classList.remove('show');
+            dropdown.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+
+      setupUserDropdown();
+    });
+  </script>
+</body>
+</html>
