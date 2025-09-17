@@ -4,10 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
     /* --- Base & Variables --- */
     :root {
+      /* Dark mode variables */
       --bg-dark: #0F172A;
       --bg-light: #1E293B;
       --text-primary: #CBD5E1;
@@ -15,8 +17,10 @@
       --accent: #38BDF8;
       --table-border: #334155;
       --hover-bg: rgba(255, 255, 255, 0.03);
+      --chart-text: #CBD5E1;
     }
 
+    /* Light mode variables */
     [data-theme="light"] {
       --bg-dark: #F8FAFC;
       --bg-light: #FFFFFF;
@@ -25,6 +29,7 @@
       --accent: #0284C7;
       --table-border: #E5E7EB;
       --hover-bg: rgba(0, 0, 0, 0.03);
+      --chart-text: #1F2937;
     }
 
     *, *::before, *::after {
@@ -40,7 +45,19 @@
       transition: background-color 0.3s, color 0.3s;
     }
 
-    /* --- Sidebar --- */
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* --- Layout: Sidebar --- */
     .sidebar {
       width: 250px;
       background-color: var(--bg-light);
@@ -51,7 +68,34 @@
       flex-shrink: 0;
       transition: background-color 0.3s;
     }
+    
+    /* --- Layout: Main Content --- */
+    .main-content {
+      flex-grow: 1;
+      padding: 1.5em;
+      overflow-y: auto;
+      height: 100vh;
+    }
 
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2em;
+    }
+
+    h1, h2 {
+      color: var(--text-primary);
+      margin: 0;
+    }
+    
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5em;
+    }
+
+    /* --- Component: Sidebar --- */
     .sidebar-header {
       font-size: 1.5em;
       font-weight: bold;
@@ -91,36 +135,31 @@
       width: 20px;
       text-align: center;
     }
-
-    /* --- Main Content --- */
-    .main-content {
-      flex-grow: 1;
+    
+    /* --- Component: Card --- */
+    .card {
+      background-color: var(--bg-light);
       padding: 1.5em;
-      overflow-y: auto;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
+      border-radius: 12px;
+      margin-bottom: 1.5em;
+      transition: background-color 0.3s;
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2em;
-    }
-
-    h1 {
-      color: var(--text-primary);
-      margin: 0;
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
+    /* --- Component: KPI Cards --- */
+    .kpi-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1.5em;
     }
 
-    /* --- Theme Toggle --- */
+    /* --- Component: Table --- */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5em;
+    }
+    
+    /* --- Component: Theme Toggle --- */
     .theme-toggle {
       background: none;
       border: none;
@@ -136,7 +175,7 @@
       background-color: var(--hover-bg);
     }
 
-    /* --- User Dropdown --- */
+    /* --- Component: User Dropdown --- */
     .user-dropdown {
       position: relative;
     }
@@ -207,37 +246,13 @@
       background-color: var(--hover-bg);
       color: var(--text-primary);
     }
-
-    /* --- Card & Iframe Wrapper --- */
-    .card {
-      background-color: var(--bg-light);
-      padding: 0;
-      border-radius: 12px;
-      height: calc(100vh - 100px); /* Fill screen minus header */
-      position: relative;
-      overflow: hidden;
-    }
-
-    .iframe-wrapper {
-      position: absolute;
-      top: -40px;      
-      bottom: -40px;   
-      left: 0;
-      right: 0;
-      overflow: hidden;
-      height: calc(100% + 100px);
-    }
-
-    .iframe-wrapper iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-    }
   </style>
 </head>
 <body>
   <nav class="sidebar">
-    <div class="sidebar-header">Revartix Platform</div>
+    <div class="sidebar-header">
+      Revartix Platform
+    </div>
     <div class="sidebar-nav">
       <ul>
         <li><a href="#" class="active"><i class="fa-solid fa-fw fa-chart-pie"></i> Reports</a></li>
@@ -270,51 +285,100 @@
       </div>
     </header>
 
-    <!-- Dashboard Card -->
-    <section class="card">
-      <div class="iframe-wrapper">
-        <iframe 
-          src="http://localhost:3000/public-dashboards/06e4035d72ae479fb65d30ba7edb72d6?theme=dark"
-          id="embedded-dashboard">
-        </iframe>
+    <section class="kpi-container card" aria-labelledby="kpi-heading">
+      <h2 id="kpi-heading" class="visually-hidden">Key Performance Indicators</h2>
+      <div class="kpi-card">
+        <p class="kpi-title">Total Readings</p>
+        <p class="kpi-value" id="total-readings">0</p>
       </div>
+      <div class="kpi-card">
+        <p class="kpi-title">Unique Devices</p>
+        <p class="kpi-value" id="unique-devices">0</p>
+      </div>
+      <div class="kpi-card">
+        <p class="kpi-title">Overall Average</p>
+        <p class="kpi-value" id="average-value">0</p>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="chart-heading">
+       <h2 id="chart-heading" class="visually-hidden">Average Data Value Chart</h2>
+       <div id="main-chart" style="width: 100%; height: 400px;"></div>
+    </section>
+
+    <section class="card table-container" aria-labelledby="table-heading">
+      <h2 id="table-heading">Detailed Readings</h2>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Device Name</th>
+            <th scope="col">Data Value</th>
+            <th scope="col">Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (records && records.length > 0) { %>
+            <% records.forEach(record => { %>
+              <tr>
+                <td><%= record.x_name || 'N/A' %></td>
+                <td><%= record.x_studio_data_value %></td>
+                <td><%= record.x_studio_timestamp %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="3">No records found.</td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
     </section>
   </main>
   
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const iframe = document.getElementById('embedded-dashboard');
-      const themeButton = document.getElementById('theme-toggle');
-      const themeIcon = themeButton.querySelector('i');
-      const htmlEl = document.documentElement;
+      // Safely parse EJS data
+      const records = <%- JSON.stringify(records || []) %>;
+      let myChartInstance = null;
+      let chartOption = null;
 
-      // Apply theme to page & iframe
-      function applyTheme(theme) {
-        htmlEl.setAttribute('data-theme', theme);
-        themeIcon.className = theme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
-        localStorage.setItem('theme', theme);
+      /**
+       * Initializes and manages the theme toggle functionality.
+       */
+      function setupThemeToggle() {
+        const themeButton = document.getElementById('theme-toggle');
+        const themeIcon = themeButton.querySelector('i');
+        const htmlEl = document.documentElement;
 
-        // Update Grafana iframe
-        if (iframe) {
-          const baseUrl = "http://localhost:3000/public-dashboards/06e4035d72ae479fb65d30ba7edb72d6";
-          iframe.src = `${baseUrl}?theme=${theme}`;
-        }
+        const applyTheme = (theme) => {
+          htmlEl.setAttribute('data-theme', theme);
+          themeIcon.className = theme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+          localStorage.setItem('theme', theme);
+          
+          // Re-render chart with the new theme if it exists
+          if (myChartInstance) {
+            myChartInstance.dispose();
+            myChartInstance = echarts.init(document.getElementById('main-chart'), theme);
+            myChartInstance.setOption(chartOption);
+          }
+        };
+        
+        // Set initial theme based on localStorage
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        applyTheme(currentTheme);
+
+        themeButton.addEventListener('click', () => {
+          const newTheme = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+          applyTheme(newTheme);
+        });
       }
 
-      // Initialize theme
-      const currentTheme = localStorage.getItem('theme') || 'dark';
-      applyTheme(currentTheme);
-
-      // Theme toggle click
-      themeButton.addEventListener('click', () => {
-        const newTheme = htmlEl.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-        applyTheme(newTheme);
-      });
-
-      // User dropdown
+      /**
+       * Initializes and manages the user profile dropdown.
+       */
       function setupUserDropdown() {
         const dropdown = document.getElementById('user-dropdown');
-        if (!dropdown) return;
+        if (!dropdown) return; // Exit if dropdown doesn't exist
 
         const toggle = dropdown.querySelector('#dropdown-toggle');
         const menu = dropdown.querySelector('#dropdown-menu');
@@ -326,6 +390,7 @@
           toggle.setAttribute('aria-expanded', isExpanded);
         });
 
+        // Close dropdown when clicking anywhere else on the page
         document.addEventListener('click', () => {
           if (menu.classList.contains('show')) {
             menu.classList.remove('show');
@@ -335,6 +400,74 @@
         });
       }
 
+      /**
+       * Renders all dashboard components like KPIs and Charts.
+       */
+      function renderDashboard() {
+        try {
+          const validRecords = records.filter(r => r && r.x_name);
+          if (validRecords.length === 0) {
+            document.getElementById('main-chart').innerText = "No data available to display.";
+            return;
+          }
+
+          updateKPIs(validRecords);
+          renderChart(validRecords);
+        
+        } catch (error) {
+          console.error("Error rendering dashboard:", error);
+          const chartEl = document.getElementById('main-chart');
+          if(chartEl) chartEl.innerText = "Could not load chart data due to an error.";
+        }
+      }
+      
+      /**
+       * Updates the KPI cards with calculated data.
+       * @param {Array} data The array of valid records.
+       */
+      function updateKPIs(data) {
+        document.getElementById('total-readings').innerText = data.length;
+        document.getElementById('unique-devices').innerText = new Set(data.map(r => r.x_name)).size;
+        const average = (data.reduce((sum, r) => sum + (parseFloat(r.x_studio_data_value) || 0), 0) / data.length);
+        document.getElementById('average-value').innerText = average.toFixed(2);
+      }
+
+      /**
+       * Renders the main bar chart using ECharts.
+       * @param {Array} data The array of valid records.
+       */
+      function renderChart(data) {
+        const chartDom = document.getElementById('main-chart');
+        const deviceData = {};
+        
+        data.forEach(record => {
+          const deviceName = record.x_name;
+          if (!deviceData[deviceName]) deviceData[deviceName] = { sum: 0, count: 0 };
+          deviceData[deviceName].sum += (parseFloat(record.x_studio_data_value) || 0);
+          deviceData[deviceName].count += 1;
+        });
+
+        const deviceNames = Object.keys(deviceData);
+        const averageValues = deviceNames.map(name => (deviceData[name].sum / deviceData[name].count).toFixed(2));
+        
+        const initialTheme = localStorage.getItem('theme') || 'dark';
+        myChartInstance = echarts.init(chartDom, initialTheme);
+
+        chartOption = {
+          title: { text: 'Average Data Value per Device', textStyle: { color: 'var(--chart-text)' } },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          xAxis: { type: 'category', data: deviceNames, axisLabel: { color: 'var(--text-secondary)' } },
+          yAxis: { type: 'value', axisLabel: { color: 'var(--text-secondary)' } },
+          series: [{ name: 'Average Value', type: 'bar', data: averageValues }],
+          grid: { top: 60, right: 20, bottom: 30, left: 50 }
+        };
+        
+        myChartInstance.setOption(chartOption);
+      }
+      
+      // --- Initialize all parts of the application ---
+      renderDashboard();
+      setupThemeToggle();
       setupUserDropdown();
     });
   </script>
