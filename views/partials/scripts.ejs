@@ -1,0 +1,48 @@
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Theme Toggle Logic ---
+        const themeButton = document.getElementById('theme-toggle');
+        // This 'if' block is the fix. It prevents errors if the button doesn't exist.
+        if (themeButton) {
+            const themeIcon = themeButton.querySelector('i');
+            const htmlEl = document.documentElement;
+
+            function applyTheme(theme) {
+                localStorage.setItem('theme', theme);
+                if (theme === 'dark') {
+                    htmlEl.classList.add('dark');
+                    themeIcon.className = 'fas fa-sun';
+                } else {
+                    htmlEl.classList.remove('dark');
+                    themeIcon.className = 'fas fa-moon';
+                }
+            }
+
+            const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(savedTheme);
+
+            themeButton.addEventListener('click', () => {
+                const newTheme = htmlEl.classList.contains('dark') ? 'light' : 'dark';
+                applyTheme(newTheme);
+            });
+        }
+
+        // --- User Dropdown Logic ---
+        const dropdown = document.getElementById('user-dropdown');
+        if (dropdown) {
+            const toggle = document.getElementById('dropdown-toggle');
+            const menu = document.getElementById('dropdown-menu');
+            
+            toggle.addEventListener('click', (event) => {
+                event.stopPropagation();
+                menu.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        }
+    });
+</script>

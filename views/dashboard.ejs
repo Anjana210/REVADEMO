@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Reva Platform</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        /* Apply the Inter font family as the base font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+    <div class="flex">
+
+        <%- include('partials/sidebar') %>    
+
+        <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="relative" id="user-dropdown">
+                        <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                            <span class="font-semibold text-sm"><%= user.name %></span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
+                            <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                <span>Logout</span>
+                            </a>
+                        </div>
+                    </div>
+                    <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <section class="bg-white dark:bg-slate-800 rounded-xl shadow-md h-[calc(100vh-150px)] relative overflow-hidden">
+                <div class="absolute top-[-40px] bottom-[-40px] left-0 right-0">
+                    <iframe 
+                        id="embedded-dashboard"
+                        src="<%= grafanaPublicBase %>/<%= dashboardId %>?theme=<%= initialTheme %>"
+                        title="Analytics dashboard"
+                        class="w-full h-full border-0">
+                    </iframe>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Theme Toggle Logic ---
+        const themeButton = document.getElementById('theme-toggle');
+        const themeIcon = themeButton.querySelector('i');
+        const htmlEl = document.documentElement;
+        const iframe = document.getElementById('embedded-dashboard');
+
+        function applyTheme(theme) {
+            localStorage.setItem('theme', theme);
+            if (theme === 'dark') {
+                htmlEl.classList.add('dark');
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                htmlEl.classList.remove('dark');
+                themeIcon.className = 'fas fa-moon';
+            }
+
+            // Update iframe theme if it exists
+            if (iframe) {
+                const baseUrl = "<%= grafanaPublicBase %>/<%= dashboardId %>";
+                iframe.src = `${baseUrl}?theme=${theme}`;
+            }
+        }
+
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        applyTheme(savedTheme);
+
+        themeButton.addEventListener('click', () => {
+            const newTheme = htmlEl.classList.contains('dark') ? 'light' : 'dark';
+            applyTheme(newTheme);
+        });
+
+        // --- User Dropdown Logic ---
+        const dropdown = document.getElementById('user-dropdown');
+        if (dropdown) {
+            const toggle = document.getElementById('dropdown-toggle');
+            const menu = document.getElementById('dropdown-menu');
+            
+            toggle.addEventListener('click', (event) => {
+                event.stopPropagation();
+                menu.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

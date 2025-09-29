@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing | Reva Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style> body { font-family: 'Inter', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+    <div class="flex">
+        
+        <%- include('partials/sidebar') %>
+
+        <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
+            <header class="flex justify-between items-center mb-8">
+                 <div>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Water Billing Overview</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Manage your bills and payment methods.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                     <div class="relative" id="user-dropdown">
+                        <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                            <span class="font-semibold text-sm"><%= user.name %></span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
+                            <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                <span>Logout</span>
+                            </a>
+                        </div>
+                    </div>
+                    <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="lg:col-span-2 space-y-8">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold text-slate-500 dark:text-slate-400">Current Bill</h3>
+                                <p class="text-5xl font-bold text-slate-900 dark:text-white mt-2">$125.50</p>
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Due by July 15, 2024</p>
+                            </div>
+                            <button class="px-6 py-2 bg-[#C0392B] text-white rounded-lg font-semibold hover:bg-[#A93226]">
+                                Pay Now
+                            </button>
+                        </div>
+                        <div class="border-t border-slate-200 dark:border-slate-700 mt-6 pt-6">
+                            <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Bill Breakdown</h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                    <span>Water Consumption (5,200 Gallons)</span>
+                                    <span>$98.80</span>
+                                </div>
+                                <div class="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                    <span>Sewer Service</span>
+                                    <span>$20.00</span>
+                                </div>
+                                <div class="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                    <span>Service Fee</span>
+                                    <span>$5.00</span>
+                                </div>
+                                <div class="flex justify-between items-center text-slate-600 dark:text-slate-300">
+                                    <span>Taxes</span>
+                                    <span>$1.70</span>
+                                </div>
+                                <div class="flex justify-between items-center font-bold text-slate-900 dark:text-white mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                    <span>Total</span>
+                                    <span>$125.50</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                         <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Historical Usage</h3>
+                         <div class="h-64 flex items-center justify-center text-slate-400">
+                             <p>Chart data would be displayed here.</p>
+                         </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                        <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Past Bills</h3>
+                        <table class="min-w-full">
+                            <thead>
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Date</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Amount</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Status</th>
+                                    <th class="px-4 py-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <tr>
+                                    <td class="px-4 py-3 text-sm">June 15, 2024</td>
+                                    <td class="px-4 py-3 text-sm">$110.75</td>
+                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
+                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 text-sm">May 15, 2024</td>
+                                    <td class="px-4 py-3 text-sm">$95.20</td>
+                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
+                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 text-sm">April 15, 2024</td>
+                                    <td class="px-4 py-3 text-sm">$105.50</td>
+                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
+                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 text-sm">March 15, 2024</td>
+                                    <td class="px-4 py-3 text-sm">$120.00</td>
+                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
+                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-3 text-sm">February 15, 2024</td>
+                                    <td class="px-4 py-3 text-sm">$115.80</td>
+                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
+                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1 space-y-8">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                        <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Payment Options</h3>
+                        <div class="space-y-4">
+                            <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-4 flex justify-between items-center">
+                                <div class="flex items-center gap-4">
+                                    <i class="fa-brands fa-cc-visa text-3xl text-blue-600"></i>
+                                    <div>
+                                        <p class="font-medium text-sm">Visa **** 4242</p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">Expires 12/25</p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">Primary</span>
+                            </div>
+                            <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex justify-between items-center">
+                                <div class="flex items-center gap-4">
+                                    <i class="fa-brands fa-cc-mastercard text-3xl text-red-500"></i>
+                                    <div>
+                                        <p class="font-medium text-sm">Mastercard **** 5678</p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">Expires 08/26</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="w-full mt-6 py-2 border-2 border-[#C0392B] text-[#C0392B] rounded-lg font-semibold hover:bg-[#C0392B] hover:text-white transition-colors">
+                            Add Payment Method
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-semibold text-lg text-slate-900 dark:text-white">Auto Pay is On</h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Next payment on July 15, 2024</p>
+                            </div>
+                            <label for="autoPayToggle" class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="autoPayToggle" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-[#C0392B]"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <%- include('partials/scripts') %>
+</body>
+</html>

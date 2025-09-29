@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports | Reva Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style> 
+        body { font-family: 'Inter', sans-serif; } 
+        /* Custom style for date input placeholder */
+        input[type="text"]::-webkit-calendar-picker-indicator { display: none; }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+    <div class="flex">
+        
+        <%- include('partials/sidebar') %>
+
+        <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
+            <header class="flex justify-between items-center mb-8">
+                 <div>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Reports</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Generate and view reports related to water usage and billing.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                     <div class="relative" id="user-dropdown">
+                        <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                            <span class="font-semibold text-sm"><%= user.name %></span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
+                            <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                <span>Logout</span>
+                            </a>
+                        </div>
+                    </div>
+                    <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="space-y-8">
+                <section class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Generate New Report</h2>
+                    <form>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                            <div>
+                                <label for="report-type" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Report Type</label>
+                                <select id="report-type" name="report-type" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B] focus:border-[#C0392B]">
+                                    <option>Monthly Consumption</option>
+                                    <option>Billing History</option>
+                                    <option>Comparative Analysis</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="start-date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label>
+                                <div class="relative mt-1">
+                                    <input type="text" id="start-date" name="start-date" class="block w-full pr-10 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B] focus:border-[#C0392B]" placeholder="mm/dd/yy">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-calendar-days text-slate-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="end-date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">End Date</label>
+                                <div class="relative mt-1">
+                                    <input type="text" id="end-date" name="end-date" class="block w-full pr-10 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B] focus:border-[#C0392B]" placeholder="mm/dd/yy">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-calendar-days text-slate-400"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="format" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Format</label>
+                                <select id="format" name="format" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B] focus:border-[#C0392B]">
+                                    <option>PDF</option>
+                                    <option>CSV</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="text-right mt-6">
+                            <button type="submit" class="px-6 py-2 bg-[#C0392B] text-white rounded-lg font-semibold hover:bg-[#A93226]">Generate Report</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Previously Generated Reports</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="border-b border-slate-200 dark:border-slate-700">
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Report Type</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Date Range</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Format</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Generated On</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <% data.forEach(report => { %>
+                                    <tr>
+                                        <td class="px-4 py-4 text-sm whitespace-nowrap font-medium text-slate-900 dark:text-white"><%= report.reportType %></td>
+                                        <td class="px-4 py-4 text-sm whitespace-nowrap"><%= report.dateRange %></td>
+                                        <td class="px-4 py-4 text-sm whitespace-nowrap"><%= report.format %></td>
+                                        <td class="px-4 py-4 text-sm whitespace-nowrap"><%= report.generatedOn %></td>
+                                        <td class="px-4 py-4 text-sm whitespace-nowrap">
+                                            <a href="#" class="font-medium text-[#C0392B] hover:underline flex items-center gap-2">
+                                                <i class="fa-solid fa-download"></i>
+                                                Download
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <%- include('partials/scripts') %>
+</body>
+</html>
