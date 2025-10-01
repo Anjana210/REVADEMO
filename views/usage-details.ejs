@@ -3,18 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usage Details | Reva Platform</title>
+    <title>Water Usage | Reva Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
+        tailwind.config = { darkMode: 'class' }
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style> body { font-family: 'Inter', sans-serif; } </style>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.min.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .leaflet-popup-content-wrapper { background-color: #f9fafb; color: #1f2937; }
+        .dark .leaflet-popup-content-wrapper { background-color: #1f2937; color: #d1d5db; }
+        .leaflet-popup-tip { background-color: #f9fafb; }
+        .dark .leaflet-popup-tip { background-color: #1f2937; }
+        .leaflet-popup-content h3 { font-weight: bold; color: #C0392B; }
+        .leaflet-popup-content p { margin: 4px 0; }
+    </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
     <div class="flex">
@@ -24,13 +34,10 @@
         <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
             <header class="flex justify-between items-center mb-8">
                  <div>
-                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Usage Details by Area</h1>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Riyadh Meter Usage & Details</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Real-time meter data across the capital.</p>
                 </div>
                 <div class="flex items-center gap-4">
-                    <button class="flex items-center gap-2 px-4 py-2 bg-[#C0392B] text-white rounded-lg font-semibold hover:bg-[#A93226]">
-                        <i class="fa-solid fa-download"></i>
-                        <span>Export Data</span>
-                    </button>
                      <div class="relative" id="user-dropdown">
                         <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
                             <span class="font-semibold text-sm"><%= user.name %></span>
@@ -49,41 +56,216 @@
                 </div>
             </header>
 
-            <section class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full">
+            <div id="map" class="mb-8 shadow-lg rounded-lg h-[400px]"></div>
+
+            <section>
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                    <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Meter Data Summary</h2>
+                    <div class="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+                        <div class="relative w-full md:w-64">
+                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="search-bar" placeholder="Search by ID or Location..." class="w-full pl-10 pr-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-[#C03B2B] focus:border-[#C03B2B] outline-none">
+                        </div>
+                        <select id="building-type-filter" class="w-full md:w-auto bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#C03B2B] focus:border-[#C03B2B] outline-none">
+                            <option value="All">All Building Types</option>
+                            <option value="Residential Building">Residential Building</option>
+                            <option value="Commercial Building">Commercial Building</option>
+                            <option value="Government Building">Government Building</option>
+                        </select>
+                        <select id="status-filter" class="w-full md:w-auto bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#C03B2B] focus:border-[#C03B2B] outline-none">
+                            <option value="All">All Statuses</option>
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="In Maintenance">In Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                         <thead>
-                            <tr class="border-b border-slate-200 dark:border-slate-700">
-                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Area Name</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Average Consumption (m³)</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Amount</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Status</th>
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Meter ID</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Last Reading (gal)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Amount</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Location</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Building Type</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                            <% data.forEach(row => { %>
-                                <tr>
-                                    <td class="px-4 py-4 text-sm whitespace-nowrap font-medium text-slate-900 dark:text-white"><%= row.areaName %></td>
-                                    <td class="px-4 py-4 text-sm whitespace-nowrap"><%= row.consumption %></td>
-                                    <td class="px-4 py-4 text-sm whitespace-nowrap"><%= row.amount %></td>
-                                    <td class="px-4 py-4 text-sm whitespace-nowrap">
-                                        <% if (row.status === 'Paid') { %>
-                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span>
-                                        <% } else if (row.status === 'Pending') { %>
-                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">Pending</span>
-                                        <% } else if (row.status === 'Overdue') { %>
-                                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">Overdue</span>
-                                        <% } %>
-                                    </td>
-                                </tr>
-                            <% }); %>
-                        </tbody>
+                        <tbody id="meter-data-body" class="divide-y divide-slate-200 dark:divide-slate-700"></tbody>
                     </table>
                 </div>
             </section>
         </main>
     </div>
 
+    <%- include('partials/details-modal') %>
     <%- include('partials/scripts') %>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const metersData = <%- JSON.stringify(data) %>;
+            
+            // --- MAP ---
+            const map = L.map('map', { attributionControl: false }).setView([24.7136, 46.6753], 11);
+            let currentTileLayer = null;
+
+            const lightTiles = 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png';
+            const darkTiles = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png';
+            const stadiaAttribution = '&copy; Stadia Maps, &copy; OpenMapTiles &copy; OpenStreetMap';
+
+            const updateMapTheme = () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                const tileUrl = isDark ? darkTiles : lightTiles;
+
+                if (currentTileLayer) {
+                    map.removeLayer(currentTileLayer);
+                }
+                currentTileLayer = L.tileLayer(tileUrl, { attribution: stadiaAttribution }).addTo(map);
+            };
+
+            const iconMappings = {
+                'Residential Building': { icon: 'home', color: 'blue' },
+                'Commercial Building': { icon: 'building', color: 'orange' },
+                'Government Building': { icon: 'landmark', color: 'purple' },
+                'default': { icon: 'question-circle', color: 'gray' }
+            };
+
+            let markersLayer = new L.LayerGroup().addTo(map);
+
+            // --- ELEMENTS ---
+            const searchBar = document.getElementById('search-bar');
+            const buildingTypeFilter = document.getElementById('building-type-filter');
+            const statusFilter = document.getElementById('status-filter');
+            const tableBody = document.getElementById('meter-data-body');
+            const modal = document.getElementById('details-modal');
+            const closeModalBtn = document.getElementById('modal-close-button');
+            const themeButton = document.getElementById('theme-toggle');
+
+            // --- HELPER FUNCTIONS ---
+            const getStatusBadgeHTML = (status) => {
+                let statusClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
+                let dotClass = 'bg-yellow-500';
+                if (status === 'Active') {
+                    statusClass = 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+                    dotClass = 'bg-green-500';
+                } else if (status === 'Inactive') {
+                    statusClass = 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-300';
+                    dotClass = 'bg-slate-500';
+                }
+                return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${statusClass}"><span class="w-2 h-2 rounded-full ${dotClass}"></span> ${status}</span>`;
+            };
+
+            // --- MODAL LOGIC ---
+            const openModal = (meterId) => {
+                const meter = metersData.find(m => m.id === meterId);
+                if (!meter) return;
+                
+                document.getElementById('modal-meter-id').textContent = meter.id.replace('#','');
+                document.getElementById('modal-meter-location').textContent = meter.locationName;
+                document.getElementById('modal-meter-status').innerHTML = getStatusBadgeHTML(meter.status);
+                document.getElementById('modal-meter-building').textContent = meter.buildingType;
+                document.getElementById('modal-meter-last').textContent = meter.lastReading.toLocaleString() + ' gal';
+                document.getElementById('modal-meter-total').textContent = meter.totalReadings.toLocaleString() + ' gal';
+
+                const paymentBody = document.getElementById('modal-payment-body');
+                paymentBody.innerHTML = '';
+                meter.paymentHistory.forEach(p => {
+                    const row = `
+                        <tr>
+                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">${p.date}</td>
+                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">${p.description}</td>
+                            <td class="px-4 py-3 text-sm font-semibold ${p.type === 'Credit' ? 'text-green-500' : 'text-red-500'}">${p.amount}</td>
+                        </tr>`;
+                    paymentBody.innerHTML += row;
+                });
+                modal.classList.remove('hidden');
+            };
+            const closeModal = () => modal.classList.add('hidden');
+
+            // --- UPDATE FUNCTIONS ---
+            const updateTable = (data) => {
+                tableBody.innerHTML = '';
+                data.forEach(meter => {
+                    const row = `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#C03B2B]">${meter.id}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">${meter.lastReading.toLocaleString()}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">${meter.amount}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">${meter.locationName}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">${meter.buildingType}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">${getStatusBadgeHTML(meter.status)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <a href="#" data-meter-id="${meter.id}" class="view-details-btn font-semibold text-[#C03B2B] hover:text-[#A93226]">View Details</a>
+                            </td>
+                        </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            };
+
+            const updateMapMarkers = (data) => {
+                markersLayer.clearLayers();
+                data.forEach(meter => {
+                    const iconDetails = iconMappings[meter.buildingType] || iconMappings.default;
+                    const markerIcon = L.AwesomeMarkers.icon({icon: iconDetails.icon, prefix: 'fa', markerColor: iconDetails.color});
+                    const popupContent = `
+                        <h3>${meter.id}</h3>
+                        <p><strong>Building:</strong> ${meter.buildingType}</p>
+                        <p><strong>Status:</strong> ${getStatusBadgeHTML(meter.status)}</p>
+                        <p><strong>Location:</strong> ${meter.locationName}</p>
+                        <hr class="border-slate-600 my-1">
+                        <p><strong>Last Reading:</strong> ${meter.lastReading.toLocaleString()} gal</p>
+                        <p><strong>Total Readings:</strong> ${meter.totalReadings.toLocaleString()} gal</p>
+                        <p><strong>Amount:</strong> ${meter.amount}</p>`;
+                    L.marker([meter.lat, meter.lng], { icon: markerIcon }).addTo(markersLayer)
+                        .bindPopup(popupContent);
+                });
+            };
+            
+            const updateDisplay = () => {
+                const type = buildingTypeFilter.value;
+                const status = statusFilter.value;
+                const searchTerm = searchBar.value.toLowerCase();
+
+                const filteredMeters = metersData.filter(meter => {
+                    const typeMatch = type === 'All' || meter.buildingType === type;
+                    const statusMatch = status === 'All' || meter.status === status;
+                    const searchMatch = searchTerm === '' || 
+                                        meter.id.toLowerCase().includes(searchTerm) || 
+                                        meter.locationName.toLowerCase().includes(searchTerm);
+                    return typeMatch && statusMatch && searchMatch;
+                });
+                updateTable(filteredMeters);
+                updateMapMarkers(filteredMeters);
+            };
+
+            // --- EVENT LISTENERS ---
+            tableBody.addEventListener('click', (e) => {
+                if (e.target.classList.contains('view-details-btn')) {
+                    e.preventDefault();
+                    const meterId = e.target.getAttribute('data-meter-id');
+                    openModal(meterId);
+                }
+            });
+            
+            searchBar.addEventListener('input', updateDisplay);
+            buildingTypeFilter.addEventListener('change', updateDisplay);
+            statusFilter.addEventListener('change', updateDisplay);
+            closeModalBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', e => { if (e.target.id === 'details-modal') closeModal(); });
+            
+            if (themeButton) {
+                themeButton.addEventListener('click', () => {
+                    setTimeout(updateMapTheme, 50);
+                });
+            }
+            
+            // --- INITIAL LOAD ---
+            updateDisplay();
+            updateMapTheme();
+        });
+    </script>
 </body>
 </html>

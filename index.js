@@ -113,38 +113,78 @@ app.get('/home', requireLogin, async (req, res) => {
 
 // Dashboard Page Route
 app.get('/dashboard', requireLogin, (req, res) => {
-  res.render('dashboard', {
-    user: req.session.user,
-    grafanaPublicBase: 'http://localhost:3000/public-dashboards',
-    dashboardId: '06e4035d72ae479fb65d30ba7edb72d6',
-    initialTheme: 'dark',
-    activePage: 'dashboard'
-  });
+    // --- Data Processing for Dashboard ---
+    const parseNumber = (str) => {
+        if (typeof str !== 'string') return 0;
+        return parseFloat(str.replace(/[^0-9.-]+/g, "")) || 0;
+    };
+
+    // 1. KPIs
+    const totalMeters = masterMeterData.length;
+    const activeMeters = masterMeterData.filter(m => m.status === 'Active').length;
+    const totalConsumption = masterMeterData.reduce((sum, meter) => sum + parseNumber(meter.totalReadings), 0);
+    const totalBilled = masterMeterData.reduce((sum, meter) => {
+        const debitPayments = meter.paymentHistory.filter(p => p.type === 'Debit');
+        return sum + debitPayments.reduce((subSum, p) => subSum + parseNumber(p.amount), 0);
+    }, 0);
+
+    // 2. Chart Data
+    const consumptionByBuildingType = masterMeterData.reduce((acc, meter) => {
+        const consumption = parseNumber(meter.totalReadings);
+        acc[meter.buildingType] = (acc[meter.buildingType] || 0) + consumption;
+        return acc;
+    }, {});
+    const buildingTypeChartData = Object.keys(consumptionByBuildingType).map(key => ({
+        name: key,
+        value: consumptionByBuildingType[key]
+    }));
+
+    const meterStatus = masterMeterData.reduce((acc, meter) => {
+        acc[meter.status] = (acc[meter.status] || 0) + 1;
+        return acc;
+    }, {});
+    const statusChartData = Object.keys(meterStatus).map(key => ({
+        name: key,
+        value: meterStatus[key]
+    }));
+
+    const consumptionPerMeterChartData = {
+        ids: masterMeterData.map(m => m.id),
+        values: masterMeterData.map(m => parseNumber(m.totalReadings))
+    };
+
+    // 3. Table Data
+    const attentionMeters = masterMeterData.filter(m => m.status === 'Needs Attention');
+
+    const recentPayments = masterMeterData
+        .flatMap(meter => meter.paymentHistory.map(p => ({ ...p, meterId: meter.id })))
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 5); // Get the 5 most recent payments
+
+    res.render('dashboards', {
+        user: req.session.user,
+        activePage: 'dashboard',
+        kpis: {
+            totalMeters,
+            activeMeters,
+            totalConsumption,
+            totalBilled: Math.abs(totalBilled) // Ensure it's a positive number
+        },
+        charts: {
+            buildingType: buildingTypeChartData,
+            status: statusChartData,
+            consumptionPerMeter: consumptionPerMeterChartData
+        },
+        attentionMeters,
+        recentPayments,
+        mapData: masterMeterData // Pass raw data for the map
+    });
 });
+
 
 // --- NEW: Placeholder Routes for other pages ---
 app.get('/billing', requireLogin, (req, res) => {
     res.render('billing', { user: req.session.user, activePage: 'billing' });
-});
-
-app.get('/usage-details', requireLogin, (req, res) => {
-    // Data updated with the Saudi Riyal (SAR) symbol
-    const usageData = [
-        { areaName: 'Al Malaz', consumption: '12,500', amount: 'SAR 350.00', status: 'Pending' },
-        { areaName: 'Olaya', consumption: '18,200', amount: 'SAR 510.50', status: 'Overdue' },
-        { areaName: 'Al Diriyah', consumption: '14,800', amount: 'SAR 415.20', status: 'Paid' },
-        { areaName: 'Al Rawdah', consumption: '11,300', amount: 'SAR 315.00', status: 'Paid' },
-        { areaName: 'King Abdullah Financial District', consumption: '25,500', amount: 'SAR 780.00', status: 'Overdue' },
-        { areaName: 'Al Shifa', consumption: '13,900', amount: 'SAR 390.75', status: 'Paid' },
-        { areaName: 'Irqah', consumption: '10,500', amount: 'SAR 290.00', status: 'Paid' },
-        { areaName: 'Al-Naseem', consumption: '16,000', amount: 'SAR 450.00', status: 'Pending' },
-    ];
-
-    res.render('usage-details', { 
-        user: req.session.user, 
-        activePage: 'usage-details',
-        data: usageData 
-    });
 });
 
 app.get('/reports', requireLogin, (req, res) => {
@@ -175,6 +215,110 @@ app.get('/settings', requireLogin, (req, res) => {
         paymentMethods: paymentMethods
     });
 });
+
+const masterMeterData = [
+    { 
+        id: 'SA-RYD-001', 
+        status: 'Active', 
+        lastReading: '12,345 gal', 
+        totalReadings: '150,500 gal', 
+        location: 'Olaya District, Riyadh', 
+        buildingType: 'Commercial Building',
+        amount: 'SAR 450.00',
+        lat: 24.7011,
+        lng: 46.6835,
+        paymentHistory: [
+            { date: '2025-09-20', description: 'Monthly Bill', amount: '- SAR 450.00', status: 'Paid', type: 'Debit' },
+            { date: '2025-08-20', description: 'Monthly Bill', amount: '- SAR 435.50', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    { 
+        id: 'SA-RYD-002', 
+        status: 'Inactive', 
+        lastReading: 'N/A', 
+        totalReadings: '89,000 gal', 
+        location: 'Al Malaz, Riyadh', 
+        buildingType: 'Residential Building',
+        amount: 'SAR 210.50',
+        lat: 24.6633,
+        lng: 46.7381,
+        paymentHistory: [
+            { date: '2025-09-15', description: 'Final Bill', amount: '- SAR 210.50', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    { 
+        id: 'SA-RYD-003', 
+        status: 'Active', 
+        lastReading: '67,890 gal', 
+        totalReadings: '750,000 gal', 
+        location: 'Diplomatic Quarter, Riyadh', 
+        buildingType: 'Government Building',
+        amount: 'SAR 2,150.00',
+        lat: 24.6853,
+        lng: 46.6325,
+        paymentHistory: [
+            { date: '2025-09-25', description: 'Quarterly Bill', amount: '- SAR 2,150.00', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    { 
+        id: 'SA-RYD-004', 
+        status: 'Needs Attention', 
+        lastReading: '54,321 gal', 
+        totalReadings: '432,100 gal', 
+        location: 'King Abdullah Financial District, Riyadh', 
+        buildingType: 'Commercial Building',
+        amount: 'SAR 1,812.20',
+        lat: 24.7631,
+        lng: 46.6433,
+        paymentHistory: [
+             { date: '2025-09-18', description: 'Payment Attempt', amount: '- SAR 1,812.20', status: 'Failed', type: 'Debit' },
+             { date: '2025-08-18', description: 'Monthly Bill', amount: '- SAR 1,750.00', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    { 
+        id: 'SA-RYD-005', 
+        status: 'Active', 
+        lastReading: '98,765 gal', 
+        totalReadings: '995,400 gal', 
+        location: 'Al-Naseem, Riyadh', 
+        buildingType: 'Residential Building',
+        amount: 'SAR 3,100.75',
+        lat: 24.7241,
+        lng: 46.8229,
+        paymentHistory: [
+            { date: '2025-09-22', description: 'Monthly Bill', amount: '- SAR 3,100.75', status: 'Paid', type: 'Debit' }
+        ]
+    }
+];
+
+// ... (your app.get('/') and other routes are here)
+
+// UPDATED /meters route
+app.get('/meters', requireLogin, (req, res) => {
+    const { status } = req.query; 
+    let filteredMeters = masterMeterData;
+    if (status) {
+        filteredMeters = masterMeterData.filter(meter => meter.status === status);
+    }
+    res.render('meters', { 
+        user: req.session.user, 
+        activePage: 'meters',
+        meters: filteredMeters,
+        activeFilter: status || 'All Meters' 
+    });
+});
+
+// UPDATED /usage-details route
+app.get('/usage-details', requireLogin, (req, res) => {
+    // We map the data to match the expected format for this page, changing 'location' to 'locationName'
+    const usageData = masterMeterData.map(m => ({...m, locationName: m.location, id: `#${m.id}`}));
+    res.render('usage-details', { 
+        user: req.session.user, 
+        activePage: 'usage-details',
+        data: usageData 
+    });
+});
+
 
 
 const server = http.createServer(app);
