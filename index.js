@@ -146,11 +146,11 @@ app.get('/admin/analytics_reports', requireAdmin, (req, res) => {
     });
 });
 
-app.get('/admin/Dashboards', requireAdmin, (req, res) => {
+app.get('/admin/dashboards', requireAdmin, (req, res) => {
     // This page is now protected and only accessible by admins
-    res.render('Admin/Dashboards', {
+    res.render('Admin/dashboards', {
         user: req.session.user,
-        activePage: 'Dashboards'
+        activePage: 'dashboards'
     });
 });
 
