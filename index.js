@@ -63,7 +63,7 @@ app.post('/login', (req, res) => {
   const { username, password } = req.body;
 
   // --- Check for Admin credentials ---
-  if (username === 'admin' && password === 'Demo@123') {
+  if (username === 'admin_demo' && password === 'Demo@123') {
     req.session.user = {
       name: 'Admin User Demo',
       uid: 'demo_admin_01',
@@ -74,7 +74,7 @@ app.post('/login', (req, res) => {
   }
 
   // --- Check for Customer credentials ---
-  if (username === 'demo customer' && password === 'Demo@123') {
+  if (username === 'customer_demo' && password === 'Demo@123') {
     req.session.user = {
       name: 'Customer User Demo',
       uid: 1,
