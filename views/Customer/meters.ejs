@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meters | Reva Platform</title>
+    <title>Meter Details | Reva Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
+        tailwind.config = { darkMode: 'class' }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -16,17 +14,19 @@
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
     <div class="flex">
+        
         <%- include('partials/sidebar') %>
+
         <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
             <header class="flex justify-between items-center mb-8">
-                 <div>
-                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Meter Management</h1>
-                    <p class="text-slate-500 dark:text-slate-400 mt-1">Manage and monitor all your water meters in one place.</p>
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Meter Details</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">View detailed information about your water meter.</p>
                 </div>
                 <div class="flex items-center gap-4">
-                     <div class="relative" id="user-dropdown">
+                    <div class="relative" id="user-dropdown">
                         <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
-                            <span class="font-semibold text-sm"><%= user.name %></span>
+                            <span class="font-semibold text-sm">Customer User Demo</span>
                             <i class="fas fa-chevron-down text-xs"></i>
                         </button>
                         <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
@@ -41,133 +41,68 @@
                     </button>
                 </div>
             </header>
-            <section>
-                <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                    <div class="w-full md:w-auto flex-grow flex items-center gap-4">
-                        <div class="relative flex-grow">
-                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="text" placeholder="Search by meter ID or location" class="w-full pl-10 pr-4 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-[#C0392B] focus:border-[#C0392B] outline-none">
-                        </div>
-                        <div class="hidden md:flex items-center gap-2">
-                            <a href="/meters" class="px-4 py-2 text-sm font-semibold rounded-lg <%= activeFilter === 'All Meters' ? 'bg-[#C0392B] text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' %>">All Meters</a>
-                            <a href="/meters?status=Active" class="px-4 py-2 text-sm font-semibold rounded-lg <%= activeFilter === 'Active' ? 'bg-[#C0392B] text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' %>">Active</a>
-                            <a href="/meters?status=Inactive" class="px-4 py-2 text-sm font-semibold rounded-lg <%= activeFilter === 'Inactive' ? 'bg-[#C0392B] text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' %>">Inactive</a>
-                            <a href="/meters?status=Needs Attention" class="px-4 py-2 text-sm font-semibold rounded-lg <%= activeFilter === 'Needs Attention' ? 'bg-[#C0392B] text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' %>">Needs Attention</a>
+
+            <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 space-y-8">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                        <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Meter Information</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 text-sm">
+                            <div>
+                                <p class="font-medium text-slate-500 dark:text-slate-400">Serial Number</p>
+                                <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">SA-RYD-001</p>
+                            </div>
+                            <div>
+                                <p class="font-medium text-slate-500 dark:text-slate-400">Location</p>
+                                <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">Olaya District, Riyadh</p>
+                            </div>
+                            <div>
+                                <p class="font-medium text-slate-500 dark:text-slate-400">Type</p>
+                                <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">Commercial Building</p>
+                            </div>
+                            <div>
+                                <p class="font-medium text-slate-500 dark:text-slate-400">Status</p>
+                                <div class="mt-1">
+                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                        <span class="w-2 h-2 rounded-full bg-green-500"></span> Active
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <button class="w-full md:w-auto flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-[#C0392B] text-white hover:bg-[#A93226] transition-colors">
-                        <i class="fa-solid fa-plus"></i>
-                        <span>Add Meter</span>
-                    </button>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                        <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">History</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 text-sm">
+                            <div>
+                                <p class="font-medium text-slate-500 dark:text-slate-400">Installation Date</p>
+                                <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">2022-01-15</p>
+                            </div>
+                            <div>
+                                <p class="font-medium text-slate-500 dark:text-slate-400">Last Maintenance</p>
+                                <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">2025-07-20</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                        <thead>
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Meter ID</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Meter Number</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Last Reading</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Location</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Building Type</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="meters-table-body" class="divide-y divide-slate-200 dark:divide-slate-700">
-                            <% meters.forEach(meter => { %>
-                                <tr>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800 dark:text-slate-200"><%= meter.id %></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300"><%= meter.meterNumber %></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <% if (meter.status === 'Active') { %>
-                                            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"><span class="w-2 h-2 rounded-full bg-green-500"></span> Active</span>
-                                        <% } else if (meter.status === 'Inactive') { %>
-                                            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-300"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Inactive</span>
-                                        <% } else { %>
-                                            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Needs Attention</span>
-                                        <% } %>
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300"><%= meter.lastReading %></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300"><%= meter.location %></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300"><%= meter.buildingType %></td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                        <a href="#" data-meter-id="<%= meter.id %>" class="view-details-btn font-semibold text-[#C0392B] hover:text-[#A93226]">View Details</a>
-                                    </td>
-                                </tr>
-                            <% }); %>
-                        </tbody>
-                    </table>
+                <div class="lg:col-span-1">
+                    <div class="bg-sky-50 dark:bg-sky-900/50 rounded-xl shadow-md p-6">
+                        <h2 class="text-xl font-semibold text-sky-800 dark:text-sky-200 mb-4">Live Readings</h2>
+                        <div>
+                            <p class="text-sm font-medium text-sky-600 dark:text-sky-300">Current Reading</p>
+                            <p class="text-5xl font-bold text-sky-900 dark:text-white mt-2">12,345 <span class="text-2xl font-medium text-sky-700 dark:text-sky-200">gal</span></p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Last Updated: October 5, 2025 at 9:45 AM</p>
+                        </div>
+                        <button class="mt-6 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg bg-[#C0392B] text-white hover:bg-[#A93226] transition-colors">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                            <span>Refresh</span>
+                        </button>
+                    </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <%- include('partials/details-modal') %>
     <%- include('partials/scripts') %>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const metersData = <%- JSON.stringify(meters) %>;
-            
-            const modal = document.getElementById('details-modal');
-            const closeModalBtn = document.getElementById('modal-close-button');
-            const tableBody = document.getElementById('meters-table-body');
-
-            const getStatusBadgeHTML = (status) => {
-                 if (status === 'Active') return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"><span class="w-2 h-2 rounded-full bg-green-500"></span> Active</span>`;
-                 if (status === 'Inactive') return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-300"><span class="w-2 h-2 rounded-full bg-slate-500"></span> Inactive</span>`;
-                 return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Needs Attention</span>`;
-            };
-
-            const openModal = (meterId) => {
-                const meter = metersData.find(m => m.id === meterId);
-                if (!meter) return;
-
-                document.getElementById('modal-meter-id').textContent = meter.id;
-                document.getElementById('modal-meter-location').textContent = meter.location;
-                document.getElementById('modal-meter-number').textContent = meter.meterNumber;
-                document.getElementById('modal-meter-status').innerHTML = getStatusBadgeHTML(meter.status);
-                document.getElementById('modal-meter-building').textContent = meter.buildingType;
-                document.getElementById('modal-meter-last').textContent = meter.lastReading;
-                document.getElementById('modal-meter-total').textContent = meter.totalReadings;
-
-                const paymentBody = document.getElementById('modal-payment-body');
-                paymentBody.innerHTML = '';
-                meter.paymentHistory.forEach(p => {
-                    const row = `
-                        <tr>
-                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">${p.date}</td>
-                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">${meter.billNumber}</td>
-                            <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300">${p.description}</td>
-                            <td class="px-4 py-3 text-sm font-semibold ${p.type === 'Credit' ? 'text-green-500' : 'text-red-500'}">${p.amount}</td>
-                        </tr>
-                    `;
-                    paymentBody.innerHTML += row;
-                });
-
-                modal.classList.remove('hidden');
-            };
-
-            const closeModal = () => {
-                modal.classList.add('hidden');
-            };
-
-            tableBody.addEventListener('click', (e) => {
-                if (e.target.classList.contains('view-details-btn')) {
-                    e.preventDefault();
-                    const meterId = e.target.getAttribute('data-meter-id');
-                    openModal(meterId);
-                }
-            });
-
-            closeModalBtn.addEventListener('click', closeModal);
-            modal.addEventListener('click', (e) => {
-                if (e.target.id === 'details-modal') {
-                    closeModal();
-                }
-            });
-        });
-    </script>
-</body>
+    </body>
 </html>

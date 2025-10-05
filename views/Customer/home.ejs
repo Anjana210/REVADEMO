@@ -3,172 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home |
-Reva Platform </title>
+    <title>Home | Reva Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
+    <script> tailwind.config = { darkMode: 'class' } </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style> body { font-family: 'Inter', sans-serif;
-} </style>
+    <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
     <div class="flex">
-        
         <%- include('partials/sidebar') %>
-
         <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
             <header class="flex justify-between items-center mb-8">
-                 <div>
-          
-          <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Home</h1>
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Home</h1>
                     <p class="text-slate-500 dark:text-slate-400 mt-1">Welcome back, <%= user.name %>!</p>
                 </div>
                 <div class="flex items-center gap-4">
-                     <div class="relative" id="user-dropdown">
- 
-                       <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                    <div class="relative" id="user-dropdown">
+                        <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
                             <span class="font-semibold text-sm"><%= user.name %></span>
                             <i class="fas fa-chevron-down text-xs"></i>
-      
-                  </button>
+                        </button>
                         <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
                             <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
-    
-                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
                                 <span>Logout</span>
                             </a>
-          
-              </div>
+                        </div>
                     </div>
                     <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
                         <i class="fas fa-moon"></i>
-           
-         </button>
+                    </button>
                 </div>
             </header>
 
-            <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="md:col-span-2">
-               
-     <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Quick Links</h2>
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 flex flex-col items-center justify-center text-center hover:shadow-lg transition-shadow">
-                            
-<i class="fa-solid fa-file-invoice-dollar text-3xl mb-3 text-[#C0392B]"></i>
-                            <span class="font-medium text-slate-700 dark:text-slate-300">View Invoices</span>
+            <section class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 flex items-center gap-6">
+                        <div class="w-16 h-16 flex-shrink-0 flex items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/50">
+                            <i class="fa-solid fa-wallet text-3xl text-sky-600 dark:text-sky-400"></i>
                         </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 flex flex-col items-center justify-center text-center hover:shadow-lg transition-shadow">
-   
-                         <i class="fa-solid fa-credit-card text-3xl mb-3 text-[#C0392B]"></i>
-                            <span class="font-medium text-slate-700 dark:text-slate-300">Make a Payment</span>
-                        </div>
-             
-           <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 flex flex-col items-center justify-center text-center hover:shadow-lg transition-shadow">
-                            <i class="fa-solid fa-chart-line text-3xl mb-3 text-[#C0392B]"></i>
-                            <span class="font-medium text-slate-700 dark:text-slate-300">Usage Details</span>
-            
-            </div>
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 flex flex-col items-center justify-center text-center hover:shadow-lg transition-shadow">
-                            <i class="fa-solid fa-headset text-3xl mb-3 text-[#C0392B]"></i>
-                   
-         <span class="font-medium text-slate-700 dark:text-slate-300">Contact Support</span>
+                        <div>
+                            <p class="font-medium text-slate-500 dark:text-slate-400">Current Balance</p>
+                            <p class="text-3xl font-bold text-slate-900 dark:text-white mt-1">SAR <%= kpis.currentBalance %></p>
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Last payment: <%= kpis.lastPaidDate %></p>
                         </div>
                     </div>
-
-                    <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Recent Activity</h2>
-                 
-   <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                            <thead>
-                                <tr>
-    
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">DATE</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">DESCRIPTION</th>
-            
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">AMOUNT</th>
-                                </tr>
-                            </thead>
-      
-                      <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                                <tr>
-        
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">2025-09-28</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">Invoice #INV-00124 payment</td>
-                      
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-red-500">- SAR 350.00</td>
-                                </tr>
-                                <tr>
-               
-                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">2025-09-27</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 dark:text-slate-300">New service subscribed</td>
-                             
-       <td class="px-6 py-4 whitespace-nowrap text-sm text-green-500">+SAR 50.00</td>
-                                </tr>
-                            </tbody>
-                        </table>
-   
-                 </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 flex items-center gap-6">
+                        <div class="w-16 h-16 flex-shrink-0 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
+                            <i class="fa-solid fa-file-invoice-dollar text-3xl text-red-500"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-slate-500 dark:text-slate-400">Next Bill Due</p>
+                            <p class="text-3xl font-bold text-slate-900 dark:text-white mt-1">SAR <%= kpis.nextBillDue %></p>
+                             <p class="text-sm text-slate-500 dark:text-slate-400">Due on <%= kpis.nextBillDate %></p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="md:col-span-1">
-                    <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">My Widgets</h2>
-                    <div class="space-y-4">
-   
-                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                            <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Current Balance</h3>
-                            <p class="text-4xl font-bold text-[#C0392B] mb-1">SAR 458.21</p>
-       
-                     <p class="text-sm text-slate-500 dark:text-slate-400">as of September 28, 2025</p>
-                        </div>
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                     <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Quick Actions</h3>
+                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <a href="/billing" class="block p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <i class="fa-solid fa-file-invoice text-2xl text-[#C0392B]"></i>
+                            <p class="mt-2 font-semibold text-sm text-slate-800 dark:text-slate-200">View Invoices</p>
+                        </a>
+                        <a href="/billing" class="block p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                           <i class="fa-solid fa-credit-card text-2xl text-[#C0392B]"></i>
+                            <p class="mt-2 font-semibold text-sm text-slate-800 dark:text-slate-200">Make Payment</p>
+                        </a>
+                        <a href="/usage-details" class="block p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <i class="fa-solid fa-chart-line text-2xl text-[#C0392B]"></i>
+                            <p class="mt-2 font-semibold text-sm text-slate-800 dark:text-slate-200">Usage Details</p>
+                        </a>
+                        <a href="/support" class="block p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <i class="fa-solid fa-headset text-2xl text-[#C0392B]"></i>
+                            <p class="mt-2 font-semibold text-sm text-slate-800 dark:text-slate-200">Contact Support</p>
+                        </a>
+                     </div>
+                </div>
 
-                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                   
-         <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Usage Summary</h3>
-                            <div class="space-y-4">
-                                <div>
-                        
-            <div class="flex justify-between items-center mb-1">
-                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Compute</span>
-                                        
-<span class="text-sm font-medium text-slate-700 dark:text-slate-300">72%</span>
-                                    </div>
-                                    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5"><div class="bg-[#C0392B] h-2.5 rounded-full" style="width: 72%;"></div></div>
-              
-                  </div>
-                                <div>
-                                    <div class="flex justify-between items-center mb-1">
-          
-                              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Storage</span>
-                                        <span class="text-sm font-medium text-slate-700 dark:text-slate-300">45%</span>
-                      
-              </div>
-                                    <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5"><div class="bg-[#C0392B] h-2.5 rounded-full" style="width: 45%;"></div></div>
-                                </div>
-        
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md">
+                    <div class="p-6"><h3 class="text-lg font-semibold text-slate-900 dark:text-white">Recent Transactions</h3></div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead class="bg-slate-50 dark:bg-slate-700/50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left font-medium text-slate-500 dark:text-slate-400">Date</th>
+                                    <th class="px-6 py-3 text-left font-medium text-slate-500 dark:text-slate-400">Description</th>
+                                    <th class="px-6 py-3 text-right font-medium text-slate-500 dark:text-slate-400">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <% transactions.forEach(t => { %>
+                                    <tr>
+                                        <td class="px-6 py-4 text-slate-600 dark:text-slate-300"><%= t.date %></td>
+                                        <td class="px-6 py-4 font-medium text-slate-800 dark:text-slate-200"><%= t.description %></td>
+                                        <td class="px-6 py-4 text-right font-semibold <%= t.amount.startsWith('-') ? 'text-green-600' : 'text-slate-800 dark:text-slate-200' %>">
+                                            <%= t.amount.startsWith('-') ? '-' : '' %>SAR <%= t.amount.replace('-', '') %>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
                     </div>
-                        </div>
-
-                         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6 flex items-center justify-between">
-                       
-     <div>
-                                <h3 class="font-semibold text-lg text-slate-900 dark:text-white">Add Widget</h3>
-                                <p class="text-sm text-slate-500 dark:text-slate-400">Add a new widget to your dashboard.</p>
-                 
-           </div>
-                            <button class="w-10 h-10 flex items-center justify-center bg-[#C0392B] text-white rounded-full hover:bg-[#A93226]"><i class="fa-solid fa-plus"></i></button>
-                        </div>
-                    </div>
-      
-          </div>
+                </div>
             </section>
         </main>
     </div>
-        <%- include('partials/scripts') %>
+    <%- include('partials/scripts') %>
 </body>
 </html>

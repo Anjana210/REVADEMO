@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support & Help | Reva Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> tailwind.config = { darkMode: 'class' } </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style> 
+        body { font-family: 'Inter', sans-serif; }
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+    <div class="flex">
+        <%- include('partials/sidebar') %>
+        <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Support & Help Center</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Find answers, get help, and manage your services.</p>
+                </div>
+            </header>
+
+            <section class="space-y-8">
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Contact Support</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Our team is here to help. Choose your preferred way to connect with us.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                        <a href="#" class="block p-6 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <i class="fa-solid fa-comments text-3xl text-[#C0392B]"></i>
+                            <p class="mt-3 font-semibold text-slate-800 dark:text-slate-200">Live Chat</p>
+                        </a>
+                        <a href="#" class="block p-6 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <i class="fa-solid fa-ticket text-3xl text-[#C0392B]"></i>
+                            <p class="mt-3 font-semibold text-slate-800 dark:text-slate-200">Submit a Ticket</p>
+                        </a>
+                        <a href="#" class="block p-6 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <i class="fa-brands fa-whatsapp text-3xl text-[#C0392B]"></i>
+                            <p class="mt-3 font-semibold text-slate-800 dark:text-slate-200">WhatsApp</p>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Service Requests</h2>
+                    <ul class="divide-y divide-slate-200 dark:divide-slate-700">
+                        <li class="py-4 flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <i class="fa-solid fa-plug-circle-plus text-2xl text-slate-400"></i>
+                                <div>
+                                    <h3 class="font-semibold text-slate-800 dark:text-slate-200">Request a New Connection</h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Apply for a new water service connection for your property.</p>
+                                </div>
+                            </div>
+                            <button class="px-4 py-2 text-sm font-semibold bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">Start Request</button>
+                        </li>
+                        <li class="py-4 flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <i class="fa-solid fa-plug-circle-minus text-2xl text-slate-400"></i>
+                                <div>
+                                    <h3 class="font-semibold text-slate-800 dark:text-slate-200">Request Disconnection</h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Submit a request to permanently disconnect service.</p>
+                                </div>
+                            </div>
+                            <button class="px-4 py-2 text-sm font-semibold bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">Start Request</button>
+                        </li>
+                         <li class="py-4 flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <i class="fa-solid fa-gauge-circle-bolt text-2xl text-slate-400"></i>
+                                <div>
+                                    <h3 class="font-semibold text-slate-800 dark:text-slate-200">Request Meter Replacement</h3>
+                                    <p class="text-sm text-slate-500 dark:text-slate-400">Report a faulty meter and request a replacement unit.</p>
+                                </div>
+                            </div>
+                            <button class="px-4 py-2 text-sm font-semibold bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">Start Request</button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
+                    <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Frequently Asked Questions</h2>
+                    <div class="space-y-4">
+                        <% faqs.forEach(faq => { %>
+                            <div class="border-b border-slate-200 dark:border-slate-700 pb-4">
+                                <button class="faq-toggle w-full flex justify-between items-center text-left">
+                                    <span class="font-semibold text-slate-800 dark:text-slate-200"><%= faq.question %></span>
+                                    <i class="fa-solid fa-chevron-down transition-transform"></i>
+                                </button>
+                                <div class="faq-answer mt-2 text-slate-600 dark:text-slate-300">
+                                    <p><%= faq.answer %></p>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <%- include('partials/scripts') %>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const faqToggles = document.querySelectorAll('.faq-toggle');
+            faqToggles.forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const answer = toggle.nextElementSibling;
+                    const icon = toggle.querySelector('i');
+
+                    if (answer.style.maxHeight) {
+                        answer.style.maxHeight = null;
+                        icon.classList.remove('rotate-180');
+                    } else {
+                        answer.style.maxHeight = answer.scrollHeight + "px";
+                        icon.classList.add('rotate-180');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

@@ -3,184 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Billing | Reva Platform</title>
+    <title>Billing & Payments | Reva Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
-    </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script> tailwind.config = { darkMode: 'class' } </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
     <div class="flex">
-        
         <%- include('partials/sidebar') %>
-
         <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
             <header class="flex justify-between items-center mb-8">
-                 <div>
-                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Water Billing Overview</h1>
-                    <p class="text-slate-500 dark:text-slate-400 mt-1">Manage your bills and payment methods.</p>
-                </div>
-                <div class="flex items-center gap-4">
-                     <div class="relative" id="user-dropdown">
-                        <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
-                            <span class="font-semibold text-sm"><%= user.name %></span>
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </button>
-                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
-                            <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
-                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                                <span>Logout</span>
-                            </a>
-                        </div>
-                    </div>
-                    <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
-                        <i class="fas fa-moon"></i>
-                    </button>
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Billing & Payments</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Manage your invoices, payments, and tariff plan.</p>
                 </div>
             </header>
 
             <section class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
                 <div class="lg:col-span-2 space-y-8">
-                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="font-semibold text-slate-500 dark:text-slate-400">Current Bill</h3>
-                                <p class="text-5xl font-bold text-slate-900 dark:text-white mt-2">SAR 125.50</p>
-                                <p class="text-sm text-slate-500 dark:text-slate-400">Due by July 15, 2024</p>
-                            </div>
-                            <button class="px-6 py-2 bg-[#C0392B] text-white rounded-lg font-semibold hover:bg-[#A93226]">
-                                Pay Now
-                            </button>
-                        </div>
-                        <div class="border-t border-slate-200 dark:border-slate-700 mt-6 pt-6">
-                            <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Bill Breakdown</h3>
-                            <div class="space-y-2 text-sm">
-                                <div class="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                    <span>Water Consumption (5,200 Gallons)</span>
-                                    <span>SAR 98.80</span>
-                                </div>
-                                <div class="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                    <span>Sewer Service</span>
-                                    <span>SAR 20.00</span>
-                                </div>
-                                <div class="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                    <span>Service Fee</span>
-                                    <span>SAR 5.00</span>
-                                </div>
-                                <div class="flex justify-between items-center text-slate-600 dark:text-slate-300">
-                                    <span>Taxes</span>
-                                    <span>SAR 1.70</span>
-                                </div>
-                                <div class="flex justify-between items-center font-bold text-slate-900 dark:text-white mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                                    <span>Total</span>
-                                    <span>SAR 125.50</span>
-                                </div>
-                            </div>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md">
+                        <div class="p-6"><h2 class="text-xl font-semibold text-slate-900 dark:text-white">My Invoices</h2></div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead class="bg-slate-50 dark:bg-slate-700/50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left font-medium text-slate-500 dark:text-slate-400">Invoice ID</th>
+                                        <th class="px-6 py-3 text-left font-medium text-slate-500 dark:text-slate-400">Due Date</th>
+                                        <th class="px-6 py-3 text-left font-medium text-slate-500 dark:text-slate-400">Amount</th>
+                                        <th class="px-6 py-3 text-left font-medium text-slate-500 dark:text-slate-400">Status</th>
+                                        <th class="px-6 py-3 text-left font-medium text-slate-500 dark:text-slate-400">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoices-table-body" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                    <% invoices.forEach(invoice => { %>
+                                        <tr>
+                                            <td class="px-6 py-4 font-medium text-slate-800 dark:text-slate-200"><%= invoice.id %></td>
+                                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300"><%= invoice.dueDate %></td>
+                                            <td class="px-6 py-4 text-slate-600 dark:text-slate-300">SAR <%= invoice.amount %></td>
+                                            <td class="px-6 py-4">
+                                                <% if (invoice.status === 'Paid') { %>
+                                                    <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span>
+                                                <% } else { %>
+                                                    <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"><%= invoice.status %></span>
+                                                <% } %>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <% if (invoice.status === 'Due' || invoice.status === 'Overdue') { %>
+                                                    <button class="font-semibold text-[#C0392B] hover:text-[#A93226]">Pay Now</button>
+                                                <% } else { %>
+                                                    <button data-invoice-id="<%= invoice.id %>" class="view-invoice-btn font-semibold text-slate-500 hover:text-slate-700">View</button>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                        <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Past Bills</h3>
-                        <table class="min-w-full">
-                            <thead>
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Date</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Amount</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Status</th>
-                                    <th class="px-4 py-2"></th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                                <tr>
-                                    <td class="px-4 py-3 text-sm">June 15, 2024</td>
-                                    <td class="px-4 py-3 text-sm">SAR 110.75</td>
-                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
-                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-3 text-sm">May 15, 2024</td>
-                                    <td class="px-4 py-3 text-sm">SAR 95.20</td>
-                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
-                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-3 text-sm">April 15, 2024</td>
-                                    <td class="px-4 py-3 text-sm">SAR 105.50</td>
-                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
-                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-3 text-sm">March 15, 2024</td>
-                                    <td class="px-4 py-3 text-sm">SAR 120.00</td>
-                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
-                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
-                                </tr>
-                                <tr>
-                                    <td class="px-4 py-3 text-sm">February 15, 2024</td>
-                                    <td class="px-4 py-3 text-sm">SAR 115.80</td>
-                                    <td class="px-4 py-3 text-sm"><span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">Paid</span></td>
-                                    <td class="px-4 py-3 text-sm text-right"><a href="#" class="font-medium text-[#C0392B] hover:underline">View Bill</a></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Payment History</h2>
+                        <ul class="divide-y divide-slate-200 dark:divide-slate-700">
+                           <% paymentHistory.forEach(payment => { %>
+                                <li class="py-4 flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-700 rounded-full">
+                                            <i class="fa-solid fa-receipt text-slate-500 dark:text-slate-400"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-slate-800 dark:text-slate-200"><%= payment.description %></p>
+                                            <p class="text-sm text-slate-500 dark:text-slate-400"><%= payment.date %> via <%= payment.method %></p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-semibold text-slate-800 dark:text-slate-200"><%= payment.amount %></p>
+                                        <a href="<%= payment.receiptUrl %>" class="text-sm font-medium text-[#C0392B] hover:underline">Download Receipt</a>
+                                    </div>
+                                </li>
+                           <% }); %>
+                        </ul>
                     </div>
                 </div>
-
-                <div class="lg:col-span-1 space-y-8">
+                <div class="space-y-8">
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                        <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-4">Payment Options</h3>
-                        <div class="space-y-4">
-                            <div class="border border-slate-300 dark:border-slate-600 rounded-lg p-4 flex justify-between items-center">
-                                <div class="flex items-center gap-4">
-                                    <i class="fa-brands fa-cc-visa text-3xl text-blue-600"></i>
-                                    <div>
-                                        <p class="font-medium text-sm">Visa **** 4242</p>
-                                        <p class="text-xs text-slate-500 dark:text-slate-400">Expires 12/25</p>
-                                    </div>
-                                </div>
-                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300">Primary</span>
-                            </div>
-                            <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex justify-between items-center">
-                                <div class="flex items-center gap-4">
-                                    <i class="fa-brands fa-cc-mastercard text-3xl text-red-500"></i>
-                                    <div>
-                                        <p class="font-medium text-sm">Mastercard **** 5678</p>
-                                        <p class="text-xs text-slate-500 dark:text-slate-400">Expires 08/26</p>
-                                    </div>
-                                </div>
+                        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Make a Payment</h3>
+                        <div class="text-center my-4">
+                            <p class="text-sm text-slate-500 dark:text-slate-400">Total Amount Due</p>
+                            <p class="text-4xl font-bold text-[#C0392B]">SAR <%= plan.totalDue %></p>
+                        </div>
+                        <div class="space-y-3">
+                            <p class="text-sm font-medium text-center text-slate-500 dark:text-slate-400">Select payment method:</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button class="p-3 border-2 border-[#C0392B] bg-[#C0392B]/10 rounded-lg text-center font-semibold text-[#C0392B]"><i class="fa-brands fa-cc-visa mr-2"></i>Card</button>
+                                <button class="p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-center font-medium text-slate-700 dark:text-slate-300 hover:border-[#C0392B] hover:bg-[#C0392B]/10">Mada</button>
+                                <button class="p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-center font-medium text-slate-700 dark:text-slate-300 hover:border-[#C0392B] hover:bg-[#C0392B]/10"><i class="fa-brands fa-apple-pay mr-2"></i>Apple Pay</button>
+                                <button class="p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-center font-medium text-slate-700 dark:text-slate-300 hover:border-[#C0392B] hover:bg-[#C0392B]/10">SADAD</button>
                             </div>
                         </div>
-                        <button class="w-full mt-6 py-2 border-2 border-[#C0392B] text-[#C0392B] rounded-lg font-semibold hover:bg-[#C0392B] hover:text-white transition-colors">
-                            Add Payment Method
+                        <button class="w-full mt-6 bg-[#C0392B] text-white font-semibold py-3 rounded-lg hover:bg-[#A93226]">
+                            Proceed to Pay SAR <%= plan.totalDue %>
                         </button>
                     </div>
-                    
                     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <h3 class="font-semibold text-lg text-slate-900 dark:text-white">Auto Pay is On</h3>
-                                <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Next payment on July 15, 2024</p>
-                            </div>
-                            <label for="autoPayToggle" class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="autoPayToggle" class="sr-only peer" checked>
-                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-[#C0392B]"></div>
-                            </label>
-                        </div>
+                        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">My Tariff Plan</h3>
+                        <p class="text-sm font-semibold text-slate-700 dark:text-slate-200"><%= plan.type %></p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Water Tariff Block Rates (per cubic meter)</p>
+                        <ul class="text-sm mt-4 space-y-2">
+                           <% plan.rates.forEach(rate => { %>
+                                <li class="flex justify-between items-center">
+                                    <span class="text-slate-600 dark:text-slate-300">Tier: <%= rate.tier %></span>
+                                    <span class="font-semibold text-slate-800 dark:text-slate-200">SAR <%= rate.rate %></span>
+                                </li>
+                           <% }); %>
+                        </ul>
                     </div>
-
                 </div>
             </section>
         </main>
     </div>
 
+    <%- include('partials/invoice-modal') %>
     <%- include('partials/scripts') %>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const invoicesData = <%- JSON.stringify(invoices) %>;
+            const modal = document.getElementById('invoice-modal');
+            const closeModalBtn = document.getElementById('modal-close-button');
+            const tableBody = document.getElementById('invoices-table-body');
+
+            const openModal = (invoiceId) => {
+                const invoice = invoicesData.find(inv => inv.id === invoiceId);
+                if (!invoice || !invoice.customerName) {
+                    alert('Detailed information for this invoice is not available.');
+                    return;
+                }
+                
+                document.getElementById('modal-invoice-id').textContent = invoice.id;
+                document.getElementById('modal-customer-name').textContent = invoice.customerName;
+                document.getElementById('modal-account-number').textContent = invoice.accountNumber;
+                document.getElementById('modal-address').textContent = invoice.address;
+                document.getElementById('modal-meter-number').textContent = invoice.meterNumber;
+                document.getElementById('modal-meter-diameter').textContent = invoice.meterDiameter;
+                document.getElementById('modal-start-details').textContent = `${invoice.consumptionStartDate} (${invoice.startRead})`;
+                document.getElementById('modal-end-details').textContent = `${invoice.consumptionEndDate} (${invoice.endRead})`;
+                document.getElementById('modal-consumption-value').textContent = `SAR ${invoice.consumptionValue}`;
+                document.getElementById('modal-service-fee').textContent = `SAR ${invoice.serviceFee}`;
+                document.getElementById('modal-meter-tariff').textContent = `SAR ${invoice.meterTariff}`;
+                document.getElementById('modal-before-vat').textContent = `SAR ${invoice.beforeVAT}`;
+                document.getElementById('modal-vat-value').textContent = `SAR ${invoice.vatValue}`;
+                document.getElementById('modal-total-amount').textContent = `SAR ${invoice.totalAmount}`;
+                
+                modal.classList.remove('hidden');
+            };
+
+            const closeModal = () => modal.classList.add('hidden');
+
+            tableBody.addEventListener('click', (e) => {
+                if (e.target.classList.contains('view-invoice-btn')) {
+                    const invoiceId = e.target.getAttribute('data-invoice-id');
+                    openModal(invoiceId);
+                }
+            });
+
+            closeModalBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'invoice-modal') closeModal();
+            });
+        });
+    </script>
 </body>
 </html>

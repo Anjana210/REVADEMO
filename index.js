@@ -180,59 +180,116 @@ app.get('/admin/support_center', requireAdmin, (req, res) => {
 // All customer routes now use `requireCustomer` for protection
 
 // Home Page Route - Odoo references removed
+// Home Page Route
+// Home Page Route
 app.get('/home', requireCustomer, (req, res) => {
-    // Using placeholder data for demonstration
+    // In a real app, you would fetch this summary data from your database
+    const kpiData = {
+        currentBalance: '125.50',
+        nextBillDue: '130.00',
+        lastPaidDate: 'December 15, 2025',
+        nextBillDate: 'January 20, 2026'
+    };
+
+    const usageGraphData = {
+        labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        values: [4200, 4500, 4300, 4600, 4400, 4750]
+    };
+
+    const recentTransactions = [
+        { date: '2025-12-15', description: 'Payment Received', amount: '-125.50' },
+        { date: '2025-11-20', description: 'Monthly Bill', amount: '130.00' },
+        { date: '2025-10-20', description: 'Monthly Bill', amount: '115.00' }
+    ];
 
     res.render('Customer/home', {
-      records: masterMeterData,
-      user: req.session.user,
-      activePage: 'home'
-    });
-});
-
-// Dashboard Page Route
-app.get('/dashboards', requireCustomer, (req, res) => {
-    const parseNumber = (str) => {
-        if (typeof str !== 'string') return 0;
-        return parseFloat(str.replace(/[^0-9.-]+/g, "")) || 0;
-    };
-    const totalMeters = masterMeterData.length;
-    const activeMeters = masterMeterData.filter(m => m.status === 'Active').length;
-    const totalConsumption = masterMeterData.reduce((sum, meter) => sum + parseNumber(meter.totalReadings), 0);
-    const totalBilled = masterMeterData.reduce((sum, meter) => {
-        const debitPayments = meter.paymentHistory.filter(p => p.type === 'Debit');
-        return sum + debitPayments.reduce((subSum, p) => subSum + parseNumber(p.amount), 0);
-    }, 0);
-
-    // In a real app, you would process your chart data here 
-
-    res.render('Customer/dashboards', {
         user: req.session.user,
-        activePage: 'dashboards',
-        kpis: { totalMeters, activeMeters, totalConsumption, totalBilled: Math.abs(totalBilled) },
-        charts: { /* chart data would go here */ },
-        attentionMeters: masterMeterData.filter(m => m.status === 'Needs Attention'),
-        recentPayments: masterMeterData
-            .flatMap(meter => meter.paymentHistory.map(p => ({ ...p, meterId: meter.id })))
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 5),
-        mapData: masterMeterData
+        activePage: 'home',
+        kpis: kpiData,
+        graphData: usageGraphData,
+        transactions: recentTransactions
     });
 });
+
 
 // Billing Page Route
 app.get('/billing', requireCustomer, (req, res) => {
-    res.render('Customer/billing', { user: req.session.user, activePage: 'billing' });
+    // Expanded invoice data to populate the modal
+    const invoicesData = [
+        { 
+            id: 'INV-00125', issueDate: '2025-10-05', dueDate: '2025-10-25', amount: '465.50', status: 'Due',
+            // ... (details for this invoice would go here)
+        },
+        { 
+            id: 'INV-00124', issueDate: '2025-09-05', dueDate: '2025-09-25', amount: '450.00', status: 'Paid',
+            // --- Detailed data for the modal ---
+            customerName: 'Customer User Demo',
+            address: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245',
+            accountNumber: '987-654-3210',
+            meterNumber: '65315101',
+            billingUnits: 'Gallons',
+            meterDiameter: '2 inches',
+            consumptionStartDate: '2025-08-03',
+            startRead: '11195',
+            consumptionEndDate: '2025-09-02',
+            endRead: '12345',
+            beforeVAT: '391.30',
+            vatPercentage: '15%',
+            vatValue: '58.70',
+            afterVAT: '450.00',
+            consumptionValue: '380.00',
+            serviceFee: '5.30',
+            meterTariff: '6.00',
+            totalAmount: '450.00'
+        },
+        { 
+            id: 'INV-00123', issueDate: '2025-08-05', dueDate: '2025-08-25', amount: '435.50', status: 'Paid',
+            // ... (details for this invoice would go here)
+        }
+    ];
+
+    const paymentHistoryData = [
+        { id: 'TXN-98765', date: '2025-09-20', description: 'Payment for INV-00124', amount: 'SAR 450.00', method: 'Mada', receiptUrl: '#' },
+        { id: 'TXN-98764', date: '2025-08-19', description: 'Payment for INV-00123', amount: 'SAR 435.50', method: 'Visa', receiptUrl: '#' }
+    ];
+
+    const planDetails = {
+        type: 'Postpaid Residential',
+        totalDue: '465.50',
+        rates: [
+            { tier: '1 - 15 m³', rate: '0.10' }, { tier: '16 - 30 m³', rate: '1.00' },
+            { tier: '31 - 45 m³', rate: '3.00' }, { tier: '46 - 60 m³', rate: '4.00' },
+            { tier: '> 60 m³', rate: '6.00' }
+        ]
+    };
+
+    res.render('Customer/billing', { 
+        user: req.session.user, 
+        activePage: 'billing',
+        invoices: invoicesData,
+        paymentHistory: paymentHistoryData,
+        plan: planDetails
+    });
 });
 
 // Reports Page Route
 app.get('/reports', requireCustomer, (req, res) => {
-    const reportsData = [
-        { reportType: 'Monthly Consumption', dateRange: '01/01/2024 - 01/31/2024', format: 'PDF', generatedOn: '02/01/2024' },
-        { reportType: 'Billing History', dateRange: '01/01/2023 - 12/31/2023', format: 'CSV', generatedOn: '01/15/2024' },
-        { reportType: 'Comparative Analysis', dateRange: 'Q1 2023 vs Q1 2024', format: 'PDF', generatedOn: '04/01/2024' }
+    // In a real app, you would fetch this from the database
+    const metersList = masterMeterData.map(m => ({ id: m.id, location: m.location }));
+
+    const pastInvoices = [
+        { id: 'INV-00124', issueDate: '2025-09-05', amount: 'SAR 450.00', status: 'Paid', downloadUrl: '#' },
+        { id: 'INV-00123', issueDate: '2025-08-05', amount: 'SAR 435.50', status: 'Paid', downloadUrl: '#' },
+        { id: 'INV-00122', issueDate: '2025-07-05', amount: 'SAR 445.00', status: 'Paid', downloadUrl: '#' },
+        { id: 'INV-00121', issueDate: '2025-06-05', amount: 'SAR 420.75', status: 'Paid', downloadUrl: '#' }
     ];
-    res.render('Customer/reports', { user: req.session.user, activePage: 'reports', data: reportsData });
+
+    res.render('Customer/reports', { 
+        user: req.session.user, 
+        activePage: 'reports',
+        meters: metersList,
+        invoices: pastInvoices
+    });
 });
 
 // Settings Page Route
@@ -261,31 +318,94 @@ app.get('/meters', requireCustomer, (req, res) => {
 
 // Usage Details Page Route
 app.get('/usage-details', requireCustomer, (req, res) => {
-    const usageData = masterMeterData.map(m => ({...m, locationName: m.location, id: `#${m.id}`}));
+    // In a real application, you would fetch this data from your database
+    const usageChartData = {
+        weekly: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            values: [1150, 1200, 1100, 1180]
+        },
+        monthly: {
+            labels: ['July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            values: [4500, 4200, 4600, 4400, 4700, 4800]
+        },
+        yearly: {
+            labels: ['2023', '2024', '2025'],
+            values: [55000, 59000, 61000]
+        }
+    };
+
     res.render('Customer/usage-details', {
         user: req.session.user,
         activePage: 'usage-details',
-        data: usageData
+        chartData: usageChartData
     });
 });
 
-// My Account Page Route
-app.get('/my_account', requireCustomer, (req, res) => {
-    // Placeholder data for the account page
-    const accountInfo = {
-        serviceAddress: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245, Saudi Arabia',
-        email: 'customer.demo@example.com',
-        phone: '+966 55 123 4567',
-        paymentMethod: {
-            type: 'Visa',
-            lastFour: '1234',
-            expiry: '08/2026'
+// Alerts & Notifications Page Route
+app.get('/alerts', requireCustomer, (req, res) => {
+    // In a real app, this data would come from a database or a real-time events system
+    const alertsData = [
+        {
+            type: 'overdue',
+            title: 'Overdue Bill Alert',
+            timestamp: 'October 2, 2025',
+            message: 'Your bill for invoice INV-00124 (SAR 450.00) is now 7 days overdue. Please make a payment to avoid service disruption.',
+            link: '/billing',
+            linkText: 'Pay Now'
+        },
+        {
+            type: 'usage',
+            title: 'Abnormal Usage Detected',
+            timestamp: 'September 30, 2025',
+            message: 'We detected continuous water flow at meter SA-RYD-004 for over 6 hours, which may indicate a leak. We recommend checking your property for potential issues.',
+            link: '/meters',
+            linkText: 'View Meter Details'
+        },
+        {
+            type: 'service',
+            title: 'Planned Service Interruption',
+            timestamp: 'September 28, 2025',
+            message: 'Please be advised of a planned service interruption in the Olaya District for system maintenance on October 10, 2025, from 1:00 AM to 5:00 AM.',
         }
+    ];
+
+    // Calculate KPIs
+    const kpiData = {
+        total: alertsData.length,
+        urgent: alertsData.filter(a => a.type === 'overdue' || a.type === 'usage').length,
+        info: alertsData.filter(a => a.type === 'service').length
     };
-    res.render('Customer/my_account', {
+
+    res.render('Customer/alerts', {
         user: req.session.user,
-        activePage: 'my-account', // For highlighting the sidebar link
-        account: accountInfo
+        activePage: 'alerts',
+        alerts: alertsData,
+        kpis: kpiData // Pass KPI data to the page
+    });
+});
+
+// Support & Help Page Route
+app.get('/support', requireCustomer, (req, res) => {
+    // In a real app, you would fetch FAQs from a database or CMS
+    const faqData = [
+        {
+            question: 'How is my water bill calculated?',
+            answer: 'Your water bill is calculated based on a tiered system known as block rates. The price per cubic meter increases as your consumption moves into higher tiers. You can view the specific rates for your plan on the Billing & Payments page.'
+        },
+        {
+            question: 'What should I do if I suspect a water leak?',
+            answer: 'If you suspect a leak, first check your property for any visible signs like dripping faucets or wet spots. You can also monitor your meter for continuous activity. If you confirm a leak or see an abnormal usage alert, we recommend contacting a certified plumber immediately.'
+        },
+        {
+            question: 'How can I update my payment information?',
+            answer: 'You can manage your payment methods on the Settings page. From there, you can add a new credit/debit card or bank account, set a default payment method, and remove old ones.'
+        }
+    ];
+
+    res.render('Customer/support', {
+        user: req.session.user,
+        activePage: 'support',
+        faqs: faqData
     });
 });
 
