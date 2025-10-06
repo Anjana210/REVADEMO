@@ -35,7 +35,6 @@
     <%- include('partials_ad/sidebar_ad') %>
 
     <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
-      <!-- Header -->
       <header class="flex justify-between items-center mb-8">
         <div>
           <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Home</h1>
@@ -45,7 +44,6 @@
         </div>
 
         <div class="flex items-center gap-4">
-          <!-- User Dropdown -->
           <div class="relative" id="user-dropdown">
             <button
               id="dropdown-toggle"
@@ -69,7 +67,6 @@
             </div>
           </div>
 
-          <!-- Theme Toggle -->
           <button
             id="theme-toggle"
             class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
@@ -79,15 +76,13 @@
         </div>
       </header>
 
-      <!-- Dashboard KPIs -->
       <section>
         <div
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4 md:gap-6"
+          class="flex flex-wrap gap-4 md:gap-6"
         >
-          <!-- Total Customers -->
           <a
             href="/admin/customer_management"
-            class="block transition-transform duration-200 hover:scale-[1.02]"
+            class="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.66rem)] 2xl:w-[calc(20%-0.8rem)] transition-transform duration-200 hover:scale-[1.02]"
           >
             <div
               class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow flex items-center gap-4 sm:gap-5 h-full"
@@ -102,7 +97,7 @@
                   Total Customers
                 </p>
                 <p
-                  class="text-2xl sm:text-3xl font-bold mt-1 text-slate-900 dark:text-white break-words"
+                  class="text-xl sm:text-2xl md:text-3xl font-bold mt-1 text-slate-900 dark:text-white whitespace-nowrap"
                 >
                   1,234
                 </p>
@@ -110,10 +105,9 @@
             </div>
           </a>
 
-          <!-- Active Meters -->
           <a
             href="/admin/meter_management"
-            class="block transition-transform duration-200 hover:scale-[1.02]"
+            class="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.66rem)] 2xl:w-[calc(20%-0.8rem)] transition-transform duration-200 hover:scale-[1.02]"
           >
             <div
               class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow flex items-center gap-4 sm:gap-5 h-full"
@@ -130,7 +124,7 @@
                   Active Meters
                 </p>
                 <p
-                  class="text-2xl sm:text-3xl font-bold mt-1 text-slate-900 dark:text-white break-words"
+                  class="text-xl sm:text-2xl md:text-3xl font-bold mt-1 text-slate-900 dark:text-white whitespace-nowrap"
                 >
                   1,024
                 </p>
@@ -138,10 +132,9 @@
             </div>
           </a>
 
-          <!-- Billed -->
           <a
             href="/admin/billing_finance"
-            class="block transition-transform duration-200 hover:scale-[1.02]"
+            class="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.66rem)] 2xl:w-[calc(20%-0.8rem)] transition-transform duration-200 hover:scale-[1.02]"
           >
             <div
               class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow flex items-center gap-4 sm:gap-5 h-full"
@@ -158,7 +151,7 @@
                   Billed
                 </p>
                 <p
-                  class="text-2xl sm:text-3xl font-bold mt-1 text-slate-900 dark:text-white break-words"
+                  class="text-xl sm:text-2xl md:text-3xl font-bold mt-1 text-slate-900 dark:text-white whitespace-nowrap"
                 >
                   SAR 24,680
                 </p>
@@ -166,10 +159,9 @@
             </div>
           </a>
 
-          <!-- Collected -->
           <a
             href="/admin/billing_finance"
-            class="block transition-transform duration-200 hover:scale-[1.02]"
+            class="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.66rem)] 2xl:w-[calc(20%-0.8rem)] transition-transform duration-200 hover:scale-[1.02]"
           >
             <div
               class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow flex items-center gap-4 sm:gap-5 h-full"
@@ -184,7 +176,7 @@
                   Collected
                 </p>
                 <p
-                  class="text-2xl sm:text-3xl font-bold mt-1 text-slate-900 dark:text-white break-words"
+                  class="text-xl sm:text-2xl md:text-3xl font-bold mt-1 text-slate-900 dark:text-white whitespace-nowrap"
                 >
                   SAR 23,456
                 </p>
@@ -192,10 +184,9 @@
             </div>
           </a>
 
-          <!-- Outstanding -->
           <a
             href="/admin/billing_finance"
-            class="block transition-transform duration-200 hover:scale-[1.02]"
+            class="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.66rem)] 2xl:w-[calc(20%-0.8rem)] transition-transform duration-200 hover:scale-[1.02]"
           >
             <div
               class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow flex items-center gap-4 sm:gap-5 h-full"
@@ -210,7 +201,7 @@
                   Outstanding
                 </p>
                 <p
-                  class="text-2xl sm:text-3xl font-bold mt-1 text-red-500 break-words"
+                  class="text-xl sm:text-2xl md:text-3xl font-bold mt-1 text-red-500 whitespace-nowrap"
                 >
                   SAR 1,224
                 </p>
@@ -220,13 +211,11 @@
         </div>
       </section>
 
-      <!-- Critical Alerts -->
       <section class="mt-10">
         <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-white">
           Critical Alerts
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- System Health -->
           <div
             class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex flex-col justify-between"
           >
@@ -249,7 +238,6 @@
             </a>
           </div>
 
-          <!-- Unpaid Invoices -->
           <div
             class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-red-500/50 flex flex-col justify-between"
           >
@@ -274,7 +262,6 @@
             </a>
           </div>
 
-          <!-- Leak/Fraud Detection -->
           <div
             class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex flex-col justify-between"
           >
@@ -303,7 +290,6 @@
     </main>
   </div>
 
-  <!-- Footer -->
   <footer
     class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400 text-right"
   >
