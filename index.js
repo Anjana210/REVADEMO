@@ -679,9 +679,11 @@ app.get('/receipt/:invoiceId', async (req, res) => {
             totalAfter: totalAfter
         });
 
-        // 4. Launch Puppeteer
+        // NEW (FIXED) CODE:
         const browser = await puppeteer.launch({ 
             headless: true, 
+            // This line forces Puppeteer to use the automatically downloaded Chromium.
+            executablePath: puppeteer.executablePath(), 
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -854,9 +856,11 @@ app.get('/reports/generate', requireCustomer, async (req, res) => {
         try {
             const htmlContent = await ejs.renderFile(templatePath, templateData);
 
-            // Puppeteer launch logic (must be handled inside the try/catch)
+            // NEW (FIXED) CODE:
             const browser = await puppeteer.launch({ 
                 headless: true, 
+                // This line forces Puppeteer to use the automatically downloaded Chromium.
+                executablePath: puppeteer.executablePath(), 
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
