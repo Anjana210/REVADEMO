@@ -683,16 +683,19 @@ app.get('/receipt/:invoiceId', async (req, res) => {
 
         // NEW (FIXED) CODE:
         const browser = await puppeteer.launch({ 
-            // Use the executable from @sparticuz/chromium
-            args: [
-                ...chromium.args,
-                '--hide-scrollbars',
-                '--disable-web-security',
-                // Keep your existing args, but use spread to include all needed ones
-            ],
-            defaultViewport: chromium.defaultViewport,
+            // This tells Puppeteer where to find the browser executable on Vercel
             executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
+            
+            // Use the specific arguments required for the serverless environment
+            args: chromium.args,
+            
+            // Set headless mode using the Chromium configuration
+            headless: chromium.headless, 
+            
+            // Use the default viewport
+            defaultViewport: chromium.defaultViewport,
+            
+            // Ignore security errors, often needed in serverless function environments
             ignoreHTTPSErrors: true,
         });
         const page = await browser.newPage();
@@ -861,16 +864,19 @@ app.get('/reports/generate', requireCustomer, async (req, res) => {
 
             // NEW (FIXED) CODE:
             const browser = await puppeteer.launch({ 
-                // Use the executable from @sparticuz/chromium
-                args: [
-                    ...chromium.args,
-                    '--hide-scrollbars',
-                    '--disable-web-security',
-                    // Keep your existing args, but use spread to include all needed ones
-                ],
-                defaultViewport: chromium.defaultViewport,
+                // This tells Puppeteer where to find the browser executable on Vercel
                 executablePath: await chromium.executablePath(),
-                headless: chromium.headless,
+                
+                // Use the specific arguments required for the serverless environment
+                args: chromium.args,
+                
+                // Set headless mode using the Chromium configuration
+                headless: chromium.headless, 
+                
+                // Use the default viewport
+                defaultViewport: chromium.defaultViewport,
+                
+                // Ignore security errors, often needed in serverless function environments
                 ignoreHTTPSErrors: true,
             });
             const page = await browser.newPage();
