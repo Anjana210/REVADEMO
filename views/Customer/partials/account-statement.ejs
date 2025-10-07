@@ -1,0 +1,177 @@
+<%
+    // Mock statement data for demonstration purposes (Keep this logic as is)
+    const mockStatementData = [
+        { date: '2025-09-05', description: 'Monthly Invoice: INV-00124', reference: '294522334455', amount: 450.00, type: 'Debit' },
+        { date: '2025-09-20', description: 'Payment Received', reference: 'TXN-98765', amount: -450.00, type: 'Credit' },
+        { date: '2025-10-05', description: 'Monthly Invoice: INV-00125', reference: '294511223344', amount: 465.50, type: 'Debit' },
+        { date: '2025-10-25', description: 'Payment Received', reference: 'TXN-98766', amount: -465.50, type: 'Credit' }
+    ];
+
+    // Calculate opening and closing balance (Keep this logic as is)
+    let totalBalance = 0; 
+    let filteredTransactions = [];
+
+    const startFilter = new Date(startDate);
+    const endFilter = new Date(endDate);
+
+    // Get transactions within the date range
+    mockStatementData.forEach(txn => {
+        const txnDate = new Date(txn.date);
+        if (txnDate >= startFilter && txnDate <= endFilter) {
+            filteredTransactions.push(txn);
+        }
+    });
+
+    // Calculate opening balance (all transactions before start date)
+    mockStatementData.forEach(txn => {
+        const txnDate = new Date(txn.date);
+        if (txnDate < startFilter) {
+            totalBalance += txn.amount;
+        }
+    });
+
+    const openingBalance = totalBalance;
+
+    // Calculate running balance
+    filteredTransactions = filteredTransactions.sort((a, b) => new Date(a.date) - new Date(b.date));
+    filteredTransactions.forEach(txn => {
+        totalBalance += txn.amount;
+        txn.runningBalance = totalBalance.toFixed(2);
+    });
+
+    const closingBalance = totalBalance;
+%>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Account Statement Report</title>
+    <style>
+        /* General document styles for a clean PDF */
+        body { font-family: 'Inter', sans-serif; font-size: 10px; color: #333; margin: 0; padding: 0; }
+        .container { width: 100%; max-width: 800px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
+        
+        /* Headers */
+        h1 { 
+            font-size: 18px; 
+            color: #C0392B; 
+            border-bottom: 2px solid #C0392B; 
+            padding-bottom: 5px; 
+            margin-bottom: 15px; /* Increased margin */
+            text-align: left; /* Ensure title is left-aligned */
+        }
+        h2 { 
+            font-size: 14px; 
+            margin-top: 15px; 
+            margin-bottom: 5px; 
+            border-bottom: 1px solid #ccc; 
+            padding-bottom: 3px; 
+            text-align: left;
+        }
+        
+        /* Information Blocks */
+        .header-info { margin-bottom: 15px; }
+        .header-info p { margin: 2px 0; line-height: 1.5; }
+        
+        /* Tables */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 20px; 
+            table-layout: fixed; /* Ensures column widths are respected */
+        }
+        th, td { 
+            border: 1px solid #eee; 
+            padding: 8px 10px; /* Increased padding */
+            text-align: left; 
+            word-wrap: break-word; /* Prevents text overflow */
+        }
+        th { 
+            background-color: #f7f7f7; 
+            font-weight: 600; 
+            color: #555; 
+        }
+        
+        /* Specific Styles */
+        .summary-table td {
+            padding: 6px 10px;
+        }
+
+        /* Alignment utility classes */
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .total-row td { font-weight: bold; background-color: #fceae9; } /* Class for closing balance */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Account Statement</h1>
+
+        <div class="header-info">
+            <p><strong>Customer:</strong> <%= user.name %></p>
+            <p><strong>Report Period:</strong> <%= startDate %> to <%= endDate %></p>
+            <p><strong>Date Generated:</strong> <%= new Date().toLocaleDateString() %></p>
+        </div>
+
+        <h2>Summary</h2>
+        <table class="summary-table" style="width: 40%;"> 
+            <tr>
+                <td style="width: 70%; background-color: #f7f7f7;"><strong>Opening Balance (as of <%= startDate %>)</strong></td>
+                <td class="text-right">SAR <%= openingBalance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') %></td>
+            </tr>
+            <tr>
+                <td style="background-color: #f7f7f7;"><strong>Total Debits</strong></td>
+                <td class="text-right">SAR <%= filteredTransactions.filter(t => t.type === 'Debit').reduce((sum, t) => sum + t.amount, 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') %></td>
+            </tr>
+            <tr>
+                <td style="background-color: #f7f7f7;"><strong>Total Credits</strong></td>
+                <td class="text-right">SAR <%= filteredTransactions.filter(t => t.type === 'Credit').reduce((sum, t) => sum + t.amount, 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') %></td>
+            </tr>
+            <tr class="total-row">
+                <td>Closing Balance (as of <%= endDate %>)</td>
+                <td class="text-right">SAR <%= closingBalance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') %></td>
+            </tr>
+        </table>
+        
+        <h2>Detailed Transactions</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Date</th>
+                    <th style="width: 30%;">Description</th>
+                    <th style="width: 20%;" class="text-center">Reference/Invoice No.</th>
+                    <th style="width: 10%;" class="text-center">Type</th>
+                    <th style="width: 15%;" class="text-right">Amount (SAR)</th>
+                    <th style="width: 15%;" class="text-right">Running Balance (SAR)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="background-color: #fff8e1;">
+                    <td colspan="4">Opening Balance</td>
+                    <td class="text-right"></td>
+                    <td class="text-right"><%= openingBalance.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') %></td>
+                </tr>
+                <% filteredTransactions.forEach(item => { %>
+                <tr>
+                    <td><%= item.date %></td>
+                    <td><%= item.description %></td>
+                    <td class="text-center"><%= item.reference %></td>
+                    <td class="text-center"><%= item.type %></td>
+                    <td class="text-right"><%= item.amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') %></td>
+                    <td class="text-right"><%= item.runningBalance %></td>
+                </tr>
+                <% }); %>
+                <% if (filteredTransactions.length === 0) { %>
+                <tr>
+                    <td colspan="6" class="text-center" style="font-style: italic;">No transactions found in the selected report period.</td>
+                </tr>
+                <% } %>
+            </tbody>
+        </table>
+        
+        <div class="text-center" style="margin-top: 20px;">
+            <p style="color: #999;">End of Statement. This is an electronically generated document.</p>
+        </div>
+    </div>
+</body>
+</html>

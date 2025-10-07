@@ -1,154 +1,206 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports & Downloads | Reva Platform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script> tailwind.config = { darkMode: 'class' } </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <style> 
-        body { font-family: 'Inter', sans-serif; } 
-        input[type="radio"]:checked + label {
-            border-color: #C0392B;
-            background-color: rgba(192, 57, 43, 0.1);
-            color: #C0392B;
-        }
-    </style>
-</head>
-<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
-    <div class="flex">
-        <%- include('partials/sidebar') %>
-        <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
-            <header class="flex justify-between items-center mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Reports & Downloads</h1>
-                    <p class="text-slate-500 dark:text-slate-400 mt-1">Export usage data and download financial documents.</p>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="relative" id="user-dropdown">
-                        <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
-                            <span class="font-semibold text-sm"><%= user.name %></span>
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </button>
-                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
-                            <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
-                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                                <span>Logout</span>
-                            </a>
-                        </div>
-                    </div>
-                    <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                </div>
-            </header>
+<!DOCTYPE html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Reports & Downloads | Reva Platform</title> 
+    <script src="https://cdn.tailwindcss.com"></script> 
+    <script> tailwind.config = { darkMode: 'class' } </script> 
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"> 
+    <style>  
+        body { font-family: 'Inter', sans-serif; }  
+        input[type="radio"]:checked + label { 
+            border-color: #C0392B; 
+            background-color: rgba(192, 57, 43, 0.1); 
+            color: #C0392B; 
+        } 
+    </style> 
+</head> 
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 transition-colors duration-300"> 
+    <div class="flex"> 
+        <%- include('partials/sidebar') %> 
+        <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8"> 
+            <header class="flex justify-between items-center mb-8"> 
+                <div> 
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Reports & Downloads</h1> 
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Export usage data and download financial documents.</p> 
+                </div> 
+                <div class="flex items-center gap-4"> 
+                    <div class="relative" id="user-dropdown"> 
+                        <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"> 
+                            <span class="font-semibold text-sm"><%= user.name %></span> 
+                            <i class="fas fa-chevron-down text-xs"></i> 
+                        </button> 
+                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1"> 
+                            <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"> 
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i> 
+                                <span>Logout</span> 
+                            </a> 
+                        </div> 
+                    </div> 
+                    <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"> 
+                        <i class="fas fa-moon"></i> 
+                    </button> 
+                </div> 
+            </header> 
 
-            <section class="space-y-8">
-                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6">
-                    <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Generate a New Report</h2>
-                    
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Report Type</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <input type="radio" name="report_type" id="usage_history" value="usage" class="sr-only" checked>
-                                <label for="usage_history" class="w-full block p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-center font-medium text-slate-700 dark:text-slate-300 hover:border-[#C0392B] cursor-pointer">Usage History</label>
-                            </div>
-                            <div>
-                                <input type="radio" name="report_type" id="account_statement" value="statement" class="sr-only">
-                                <label for="account_statement" class="w-full block p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-center font-medium text-slate-700 dark:text-slate-300 hover:border-[#C0392B] cursor-pointer">Account Statement</label>
-                            </div>
-                        </div>
-                    </div>
+            <section class="space-y-8"> 
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md p-6"> 
+                    <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Generate a New Report</h2> 
+                     
+                    <form action="/reports/generate" method="GET" target="_blank">
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div id="usage-fields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label for="meter-select" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Select Meter</label>
-                                <select id="meter-select" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B]">
-                                    <option>All Meters</option>
-                                    <% meters.forEach(meter => { %>
-                                        <option value="<%= meter.id %>"><%= meter.location %> (<%= meter.id %>)</option>
-                                    <% }); %>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="format-select" class="block text-sm font-medium text-slate-700 dark:text-slate-300">File Format</label>
-                                <select id="format-select" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B]">
-                                    <option>PDF</option>
-                                    <option>CSV</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label for="start-date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label>
-                            <input type="date" id="start-date" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B]">
-                        </div>
-                        <div>
-                            <label for="end-date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">End Date</label>
-                            <input type="date" id="end-date" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B]">
-                        </div>
-                    </div>
-                    <div class="text-right mt-6">
-                        <button class="px-5 py-2.5 bg-[#C0392B] text-white rounded-lg font-semibold hover:bg-[#A93226]">
-                            <i class="fa-solid fa-download mr-2"></i>Generate & Download
-                        </button>
-                    </div>
-                </div>
+                        <div class="mb-4"> 
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select Report Type</label> 
+                            <div class="grid grid-cols-2 gap-3"> 
+                                <div> 
+                                    <input type="radio" name="report_type" id="usage_history" value="usage" class="sr-only" checked> 
+                                    <label for="usage_history" class="w-full block p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-center font-medium text-slate-700 dark:text-slate-300 hover:border-[#C0392B] cursor-pointer">Usage History</label> 
+                                </div> 
+                                <div> 
+                                    <input type="radio" name="report_type" id="account_statement" value="statement" class="sr-only"> 
+                                    <label for="account_statement" class="w-full block p-3 border border-slate-300 dark:border-slate-600 rounded-lg text-center font-medium text-slate-700 dark:text-slate-300 hover:border-[#C0392B] cursor-pointer">Account Statement</label> 
+                                </div> 
+                            </div> 
+                        </div> 
 
-                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md">
-                    <div class="p-6 border-b border-slate-200 dark:border-slate-700">
-                        <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Download Past Invoices</h2>
-                    </div>
-                    <ul class="divide-y divide-slate-200 dark:divide-slate-700">
-                        <% invoices.forEach(invoice => { %>
-                            <li class="p-4 px-6 flex items-center justify-between">
-                                <div class="flex items-center gap-4">
-                                    <i class="fa-solid fa-file-invoice text-xl text-slate-400"></i>
-                                    <div>
-                                        <p class="font-semibold text-slate-800 dark:text-slate-200"><%= invoice.id %></p>
-                                        <p class="text-sm text-slate-500 dark:text-slate-400">Issued: <%= invoice.issueDate %> &bull; <%= invoice.amount %></p>
-                                    </div>
-                                </div>
-                                <a href="<%= invoice.downloadUrl %>" class="px-4 py-2 text-sm font-semibold bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600">
-                                    <i class="fa-solid fa-download mr-2"></i>PDF
-                                </a>
-                            </li>
-                        <% }); %>
-                    </ul>
-                </div>
-            </section>
-        </main>
-    </div>
-    
-    <%- include('partials/scripts') %>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const reportTypeRadios = document.querySelectorAll('input[name="report_type"]');
-            const usageFields = document.getElementById('usage-fields');
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> 
+                            <div id="usage-fields" class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4"> 
+                                <div> 
+                                    <label for="meter-select" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Select Meter</label> 
+                                    <select id="meter-select" name="meterId" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B]"> 
+                                        <option value="all">All Meters</option> 
+                                        <% meters.forEach(meter => { %> 
+                                            <option value="<%= meter.id %>"><%= meter.location %> (<%= meter.id %>)</option> 
+                                        <% }); %> 
+                                    </select> 
+                                </div> 
+                                <div> 
+                                    <label for="format-select" class="block text-sm font-medium text-slate-700 dark:text-slate-300">File Format</label> 
+                                     <select id="format-select" name="format" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B]"> 
+                                        <option value="pdf">PDF</option> 
+                                        <option value="csv">CSV</option> 
+                                    </select> 
+                                </div> 
+                            </div> 
+                             
+                            <div> 
+                                <label for="start-date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Start Date</label> 
+                                <input type="date" id="start-date" name="startDate" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B]"> 
+                            </div> 
+                            <div> 
+                                <label for="end-date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">End Date</label> 
+                                <input type="date" id="end-date" name="endDate" class="mt-1 block w-full border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 py-2 px-3 focus:outline-none focus:ring-1 focus:ring-[#C0392B]"> 
+                            </div> 
+                        </div> 
+                        <div class="text-right mt-6"> 
+                            <button type="submit" class="px-5 py-2.5 bg-[#C0392B] text-white rounded-lg font-semibold hover:bg-[#A93226]"> 
+                                <i class="fa-solid fa-download mr-2"></i>Generate & Download 
+                            </button> 
+                        </div> 
 
-            const toggleFields = () => {
-                const selectedType = document.querySelector('input[name="report_type"]:checked').value;
-                if (selectedType === 'usage') {
-                    usageFields.style.display = 'grid';
-                } else {
-                    usageFields.style.display = 'none';
+                    </form>
+                    </div> 
+
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-md"> 
+                    <div class="p-6 border-b border-slate-200 dark:border-slate-700"> 
+                        <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Download Past Invoices</h2> 
+                    </div> 
+                    <ul class="divide-y divide-slate-200 dark:divide-slate-700"> 
+                        <% invoices.forEach(invoice => { %> 
+                            <li class="p-4 px-6 flex items-center justify-between"> 
+                                <div class="flex items-center gap-4"> 
+                                    <i class="fa-solid fa-file-invoice text-xl text-slate-400"></i> 
+                                    <div> 
+                                        <p class="font-semibold text-slate-800 dark:text-slate-200"><%= invoice.id %></p> 
+                                        <p class="text-sm text-slate-500 dark:text-slate-400">Issued: <%= invoice.issueDate %> &bull; <%= invoice.amount %></p> 
+                                    </div> 
+                                </div> 
+                                <a href="<%= invoice.downloadUrl %>" class="px-4 py-2 text-sm font-semibold bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"> 
+                                    <i class="fa-solid fa-download mr-2"></i>PDF 
+                                </a> 
+                            </li> 
+                        <% }); %> 
+                    </ul> 
+                </div> 
+            </section> 
+        </main> 
+    </div> 
+     
+<%- include('partials/scripts') %> 
+    <script> 
+        document.addEventListener('DOMContentLoaded', () => { 
+            const reportTypeRadios = document.querySelectorAll('input[name="report_type"]'); 
+            const usageFields = document.getElementById('usage-fields'); 
+            const form = document.querySelector('form'); // Select the form element
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            
+            // --- NEW: Function to toggle fields AND update form action ---
+            const toggleFields = () => { 
+                const selectedType = document.querySelector('input[name="report_type"]:checked').value; 
+                
+                if (selectedType === 'usage') { 
+                    usageFields.style.display = 'grid'; 
+                    form.action = '/reports/generate'; // Set action for Usage History
+                } else { // 'statement'
+                    usageFields.style.display = 'none'; 
+                    form.action = '/reports/generate'; // Set action for Account Statement (Your NEW route)
+                } 
+            }; 
+            
+            reportTypeRadios.forEach(radio => { 
+                radio.addEventListener('change', toggleFields); 
+            }); 
+            
+            toggleFields(); // Initial call to set the correct state and action
+            
+            // --- UPDATED: Form Validation Logic (Now universal for both types) ---
+            form.addEventListener('submit', function(event) {
+                const reportType = document.querySelector('input[name="report_type"]:checked').value;
+                let isValid = true;
+                let errorMessage = '';
+
+                // 1. Check for required Start/End Dates (Required for both reports)
+                if (!startDateInput.value) {
+                    errorMessage += 'Please select a **Start Date** for the report period.\n';
+                    isValid = false;
                 }
-            };
-
-            reportTypeRadios.forEach(radio => {
-                radio.addEventListener('change', toggleFields);
+                if (!endDateInput.value) {
+                    errorMessage += 'Please select an **End Date** for the report period.\n';
+                    isValid = false;
+                }
+                
+                // 2. Validate Date Range (Start must be on or before End)
+                if (startDateInput.value && endDateInput.value) {
+                    const start = new Date(startDateInput.value);
+                    const end = new Date(endDateInput.value);
+                    
+                    // Check if Start Date is strictly greater than End Date
+                    if (start > end) {
+                        errorMessage += 'The **End Date** must be the same as or after the **Start Date**.\n';
+                        isValid = false;
+                    }
+                }
+                
+                // 3. Prevent submission if invalid and show alert
+                if (!isValid) {
+                    event.preventDefault(); // Stop the form from submitting
+                    alert('Report Generation Error:\n\n' + errorMessage.trim());
+                }
+                
+                // Note: MeterId is only required/validated by the backend for 'usage' reports
+                // and is correctly omitted from the URL when 'statement' is selected 
+                // because usageFields are hidden (the meterId/format inputs are inside usageFields).
             });
-
-            toggleFields();
-        });
+            // --- END: Form Validation Logic ---
+        }); 
     </script>
-        <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
-        <p>© REVARTIX Confidential, REVARTIX, All Rights Reserved. 2025.</p>
-        <p class="text-right">www.revartix.com | Reva.support@revartix.com</p>
-    </footer>
-</body>
+    <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400"> 
+        <p>© REVARTIX Confidential, REVARTIX, All Rights Reserved. 2025.</p> 
+        <p class="text-right">www.revartix.com | Reva.support@revartix.com</p> 
+    </footer> 
+</body> 
 </html>
+

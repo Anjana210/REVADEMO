@@ -48,9 +48,15 @@
                         <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-6">Meter Information</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-4 text-sm">
                             <div>
-                                <p class="font-medium text-slate-500 dark:text-slate-400">Serial Number</p>
-                                <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">SA-RYD-001</p>
+                                 <p class="font-medium text-slate-500 dark:text-slate-400">Account Number</p>
+                                 <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">9876543210</p>
                             </div>
+
+                            <div>
+                                 <p class="font-medium text-slate-500 dark:text-slate-400">Meter ID</p>
+                                 <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">SA-RYD-001</p>
+                            </div>
+
                             <div>
                                 <p class="font-medium text-slate-500 dark:text-slate-400">Location</p>
                                 <p class="font-semibold text-slate-700 dark:text-slate-300 text-base mt-1">Olaya District, Riyadh</p>
@@ -89,10 +95,10 @@
                         <h2 class="text-xl font-semibold text-sky-800 dark:text-sky-200 mb-4">Live Readings</h2>
                         <div>
                             <p class="text-sm font-medium text-sky-600 dark:text-sky-300">Current Reading</p>
-                            <p class="text-5xl font-bold text-sky-900 dark:text-white mt-2">12,345 <span class="text-2xl font-medium text-sky-700 dark:text-sky-200">gal</span></p>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Last Updated: October 5, 2025 at 9:45 AM</p>
+                            <p class="text-5xl font-bold text-sky-900 dark:text-white mt-2" id="current-reading-value">12,345 <span class="text-2xl font-medium text-sky-700 dark:text-sky-200">gal</span></p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Last Updated: <span id="last-updated-time">Loading...</span></p> 
                         </div>
-                        <button class="mt-6 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg bg-[#C0392B] text-white hover:bg-[#A93226] transition-colors">
+                        <button onclick="refreshReading()" class="mt-6 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg bg-[#C0392B] text-white hover:bg-[#A93226] transition-colors">
                             <i class="fa-solid fa-arrows-rotate"></i>
                             <span>Refresh</span>
                         </button>
@@ -101,12 +107,63 @@
             </section>
         </main>
     </div>
-        <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
+    <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
         <p>© REVARTIX Confidential, REVARTIX, All Rights Reserved. 2025.</p>
         <p class="text-right">www.revartix.com | Reva.support@revartix.com</p>
     </footer>
 
     <%- include('partials/scripts') %>
 
+    <script>
+        // A simple function to format the date and time
+        function formatDateTime(date) {
+            // Options for a user-friendly date format
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            // Options for a user-friendly time format
+            const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+
+            const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+            const formattedTime = date.toLocaleTimeString('en-US', timeOptions);
+
+            return `${formattedDate} at ${formattedTime}`;
+        }
+
+        // Function to generate a new meaningful reading value (simulated)
+        function generateNewReading(currentReading) {
+            // Convert the current reading string to an integer, removing commas
+            const current = parseInt(currentReading.replace(/,/g, ''));
+            
+            // Generate a random increase between 5 and 50 (to simulate water usage)
+            const increase = Math.floor(Math.random() * 46) + 5; 
+            const newReading = current + increase;
+            
+            // Format the new reading with a comma separator
+            return newReading.toLocaleString('en-US');
+        }
+
+        // The main function executed when the Refresh button is pressed
+        function refreshReading() {
+            const readingElement = document.getElementById('current-reading-value');
+            const timeElement = document.getElementById('last-updated-time');
+            
+            // 1. Get the current displayed reading value (excluding the 'gal' unit)
+            const currentReadingText = readingElement.textContent.split(' ')[0]; 
+
+            // 2. Generate and update the new reading
+            const newReading = generateNewReading(currentReadingText);
+            readingElement.innerHTML = `${newReading} <span class="text-2xl font-medium text-sky-700 dark:text-sky-200">gal</span>`;
+
+            // 3. Update the date and time
+            const now = new Date();
+            timeElement.textContent = formatDateTime(now);
+        }
+
+        // Run on page load to set the initial 'Last Updated' time to 'now'
+        document.addEventListener('DOMContentLoaded', () => {
+            const timeElement = document.getElementById('last-updated-time');
+            const now = new Date();
+            timeElement.textContent = formatDateTime(now);
+        });
+    </script>
     </body>
 </html>

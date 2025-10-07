@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usage Report - <%= startDate %> to <%= endDate %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: sans-serif; }
+        /* Print styles to ensure it looks good on PDF */
+        @media print {
+            body { 
+                -webkit-print-color-adjust: exact; 
+                color-adjust: exact;
+                font-size: 10pt;
+            }
+            .page-break { page-break-before: always; }
+        }
+        /* Using the primary color from the reports dashboard */
+        .header-bg { background-color: #C0392B; } 
+        .text-primary { color: #C0392B; }
+        .report-table th, .report-table td { padding: 8px; border-bottom: 1px solid #ddd; }
+        .report-table th { background-color: #f3f4f6; text-align: left; }
+    </style>
+</head>
+<body class="p-6">
+
+    <header class="mb-8 border-b pb-4">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-primary">USAGE HISTORY REPORT</h1>
+                <p class="text-sm text-gray-600">Generated on: <%= new Date().toISOString().split('T')[0] %></p>
+            </div>
+            <div class="header-bg text-white p-3 rounded">
+                <p class="font-semibold">REVA PLATFORM</p>
+                <p class="text-xs"><%= user.name %></p>
+            </div>
+        </div>
+        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+            <div>
+                <p class="font-semibold">Account Number:</p>
+                <p class="text-gray-700">987-654-3210</p>
+            </div>
+            <div>
+                <p class="font-semibold">Report Period:</p>
+                <p class="text-gray-700"><%= startDate %> to <%= endDate %></p>
+            </div>
+        </div>
+    </header>
+
+    <section class="mb-8 p-4 bg-gray-50 border rounded-lg">
+        <h2 class="text-lg font-semibold text-primary mb-2">Report Summary</h2>
+        <div class="grid grid-cols-3 gap-4 text-sm">
+            <div>
+                <p class="font-medium">Selected Meter(s):</p>
+                <p><%= meterId === 'all' ? 'All Meters' : meterId %></p>
+            </div>
+            <div>
+                <p class="font-medium">Total Days:</p>
+                <% 
+                    const start = new Date(startDate);
+                    const end = new Date(endDate);
+                    const diffTime = Math.abs(end - start);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                %>
+                <p><%= diffDays %></p>
+            </div>
+            <div>
+                <p class="font-medium">Total Consumption:</p>
+                <p class="font-bold"><%= totalConsumption %> gal</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-semibold text-primary mb-3">Detailed Usage Data</h2>
+        <table class="report-table w-full border-collapse">
+            <thead>
+                <tr>
+                    <th class="w-1/6">Date</th>
+                    <th class="w-1/6">Meter ID</th>
+                    <th class="w-1/6">Meter Location</th>
+                    <th class="w-1/6 text-right">Daily Usage (gal)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% reportData.forEach(item => { %>
+                <tr>
+                    <td><%= item.date %></td>
+                    <td><%= item.meterId %></td>
+                    <td><%= item.location %></td>
+                    <td class="text-right"><%= item.dailyUsage %></td>
+                </tr>
+                <% }); %>
+                
+                <tr class="font-bold bg-gray-200">
+                    <td colspan="3" class="text-right">TOTAL CONSUMPTION (gal):</td>
+                    <td class="text-right"><%= totalConsumption %></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <footer class="mt-10 pt-4 border-t text-xs text-gray-500 text-center">
+        <p>This is a system generated Usage History Report for <%= user.name %>.</p>
+        <p>For questions, contact reva.support@revartix.com.</p>
+        <p>© 2025 REVARTIX Confidential. All Rights Reserved.</p>
+    </footer>
+
+</body>
+</html>

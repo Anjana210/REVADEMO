@@ -2,12 +2,16 @@ const express = require('express');
 const app = express();
 const path = require('node:path');
 const http = require('http');
+// const PDFDocument = require('pdfkit');
+// const fs = require('fs');
 const { Server } = require("socket.io");
 // const axios = require('axios'); // Removed
 const cors = require('cors');
 const session = require('express-session');
-
+const puppeteer = require('puppeteer'); 
 const port = process.env.PORT || 4000;
+const ejs = require('ejs'); 
+
 
 app.set('view engine', 'ejs');
 app.use(cors({ origin: true }));
@@ -40,6 +44,73 @@ const requireCustomer = (req, res, next) => {
     }
     next();
 };
+
+// Shared demo invoices data (used by /billing and /receipt)
+const invoicesData = [
+    { 
+        id: 'INV-00125', issueDate: '2025-10-05', dueDate: '2025-10-25', amount: '465.50', status: 'Due',
+        customerName: 'Customer User Demo',
+        address: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245',
+        accountNumber: '45891000000',
+        meterNumber: '10110071690',
+        billingUnits: 'm³',
+        meterDiameter: '19',
+        consumptionStartDate: '2024-09-05',
+        startRead: '17658.11',
+        consumptionEndDate: '2024-10-05',
+        endRead: '17862.62',
+        beforeVAT: '750.02',
+        vatPercentage: '15%',
+        vatValue: '112.50',
+        afterVAT: '862.52',
+        consumptionValue: '750.02',
+        serviceFee: '375.01',
+        meterTariff: '5.00',
+        totalAmount: '1299.53'
+    },
+    { 
+        id: 'INV-00124', issueDate: '2025-09-05', dueDate: '2025-09-25', amount: '450.00', status: 'Paid',
+        customerName: 'Customer User Demo',
+        address: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245',
+        accountNumber: '987-654-3210',
+        meterNumber: '65315101',
+        billingUnits: 'm³',
+        meterDiameter: '2 inches',
+        consumptionStartDate: '2025-08-03',
+        startRead: '11195',
+        consumptionEndDate: '2025-09-02',
+        endRead: '12345',
+        beforeVAT: '391.30',
+        vatPercentage: '15%',
+        vatValue: '58.70',
+        afterVAT: '450.00',
+        consumptionValue: '380.00',
+        serviceFee: '5.30',
+        meterTariff: '6.00',
+        totalAmount: '450.00'
+    },
+    { 
+        id: 'INV-00123', issueDate: '2025-08-05', dueDate: '2025-08-25', amount: '435.50', status: 'Paid',
+        customerName: 'Customer User Demo',
+        address: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245',
+        accountNumber: '987-654-3210',
+        meterNumber: '65315102',
+        billingUnits: 'm³',
+        meterDiameter: '2 inches',
+        consumptionStartDate: '2025-07-03',
+        startRead: '10000',
+        consumptionEndDate: '2025-08-02',
+        endRead: '10500',
+        beforeVAT: '378.26',
+        vatPercentage: '15%',
+        vatValue: '56.79',
+        afterVAT: '435.05',
+        consumptionValue: '378.26',
+        serviceFee: '4.00',
+        meterTariff: '5.00',
+        totalAmount: '435.50'
+    }
+];
 
 
 // --- UPDATED ROUTES ---
@@ -202,55 +273,55 @@ app.get('/home', requireCustomer, (req, res) => {
         { date: '2025-10-20', description: 'Monthly Bill', amount: '115.00' }
     ];
 
+    // Prepare a meaningful initial live reading (simulate using masterMeterData if available)
+    const defaultMeter = masterMeterData && masterMeterData.length ? masterMeterData[0] : null;
+    const parseNumber = (s) => {
+        if (!s) return 0;
+        return Number(String(s).replace(/[^0-9.-]+/g, '')) || 0;
+    };
+    const baseReading = defaultMeter ? parseNumber(defaultMeter.lastReading) : 12345;
+    const initialReadingValue = baseReading + Math.floor(Math.random() * 10); // small increment
+    const formatNumber = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const initialReading = formatNumber(initialReadingValue);
+    const initialTimestamp = new Date().toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+
     res.render('Customer/home', {
         user: req.session.user,
         activePage: 'home',
         kpis: kpiData,
         graphData: usageGraphData,
-        transactions: recentTransactions
+        transactions: recentTransactions,
+        initialReading: initialReading,
+        initialUnit: defaultMeter && defaultMeter.lastReading && String(defaultMeter.lastReading).includes('gal') ? 'gal' : (defaultMeter && defaultMeter.billingUnits) || 'units',
+        initialTimestamp: initialTimestamp
     });
+});
+
+// API endpoint to return a simulated live reading (for the Refresh button)
+app.get('/api/reading', requireCustomer, (req, res) => {
+    const defaultMeter = masterMeterData && masterMeterData.length ? masterMeterData[0] : null;
+    const parseNumber = (s) => {
+        if (!s) return 0;
+        return Number(String(s).replace(/[^0-9.-]+/g, '')) || 0;
+    };
+    const baseReading = defaultMeter ? parseNumber(defaultMeter.lastReading) : 12345;
+    // Simulate a realistic current reading and small random variance
+    const readingValue = baseReading + Math.floor(Math.random() * 25);
+    const formatNumber = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const readingStr = formatNumber(readingValue);
+    const timestamp = new Date();
+    const formatted = timestamp.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+
+    res.json({ reading: readingStr, unit: defaultMeter && defaultMeter.lastReading && String(defaultMeter.lastReading).includes('gal') ? 'gal' : (defaultMeter && defaultMeter.billingUnits) || 'units', timestamp: timestamp.toISOString(), formatted });
 });
 
 
 // Billing Page Route
 app.get('/billing', requireCustomer, (req, res) => {
-    // Expanded invoice data to populate the modal
-    const invoicesData = [
-        { 
-            id: 'INV-00125', issueDate: '2025-10-05', dueDate: '2025-10-25', amount: '465.50', status: 'Due',
-            // ... (details for this invoice would go here)
-        },
-        { 
-            id: 'INV-00124', issueDate: '2025-09-05', dueDate: '2025-09-25', amount: '450.00', status: 'Paid',
-            // --- Detailed data for the modal ---
-            customerName: 'Customer User Demo',
-            address: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245',
-            accountNumber: '987-654-3210',
-            meterNumber: '65315101',
-            billingUnits: 'Gallons',
-            meterDiameter: '2 inches',
-            consumptionStartDate: '2025-08-03',
-            startRead: '11195',
-            consumptionEndDate: '2025-09-02',
-            endRead: '12345',
-            beforeVAT: '391.30',
-            vatPercentage: '15%',
-            vatValue: '58.70',
-            afterVAT: '450.00',
-            consumptionValue: '380.00',
-            serviceFee: '5.30',
-            meterTariff: '6.00',
-            totalAmount: '450.00'
-        },
-        { 
-            id: 'INV-00123', issueDate: '2025-08-05', dueDate: '2025-08-25', amount: '435.50', status: 'Paid',
-            // ... (details for this invoice would go here)
-        }
-    ];
-
+    // Use shared invoicesData
     const paymentHistoryData = [
-        { id: 'TXN-98765', date: '2025-09-20', description: 'Payment for INV-00124', amount: 'SAR 450.00', method: 'Mada', receiptUrl: '#' },
-        { id: 'TXN-98764', date: '2025-08-19', description: 'Payment for INV-00123', amount: 'SAR 435.50', method: 'Visa', receiptUrl: '#' }
+        { id: 'TXN-98765', date: '2025-09-20', description: `Payment for ${invoicesData[1].id}`, amount: `SAR ${invoicesData[1].totalAmount}`, method: 'Mada', receiptUrl: `/receipt/${invoicesData[1].id}` },
+        { id: 'TXN-98764', date: '2025-08-19', description: `Payment for ${invoicesData[2].id}`, amount: `SAR ${invoicesData[2].totalAmount}`, method: 'Visa', receiptUrl: `/receipt/${invoicesData[2].id}` }
     ];
 
     const planDetails = {
@@ -273,15 +344,18 @@ app.get('/billing', requireCustomer, (req, res) => {
 });
 
 // Reports Page Route
+// Reports Page Route
+// Reports Page Route
 app.get('/reports', requireCustomer, (req, res) => {
     // In a real app, you would fetch this from the database
     const metersList = masterMeterData.map(m => ({ id: m.id, location: m.location }));
 
+    // UPDATED: Set the downloadUrl to the receipt generation route /receipt/:invoiceId
     const pastInvoices = [
-        { id: 'INV-00124', issueDate: '2025-09-05', amount: 'SAR 450.00', status: 'Paid', downloadUrl: '#' },
-        { id: 'INV-00123', issueDate: '2025-08-05', amount: 'SAR 435.50', status: 'Paid', downloadUrl: '#' },
-        { id: 'INV-00122', issueDate: '2025-07-05', amount: 'SAR 445.00', status: 'Paid', downloadUrl: '#' },
-        { id: 'INV-00121', issueDate: '2025-06-05', amount: 'SAR 420.75', status: 'Paid', downloadUrl: '#' }
+        { id: 'INV-00124', issueDate: '2025-09-05', amount: 'SAR 450.00', status: 'Paid', downloadUrl: `/receipt/INV-00124` },
+        { id: 'INV-00123', issueDate: '2025-08-05', amount: 'SAR 435.50', status: 'Paid', downloadUrl: `/receipt/INV-00123` },
+        { id: 'INV-00122', issueDate: '2025-07-05', amount: 'SAR 445.00', status: 'Paid', downloadUrl: `/receipt/INV-00122` },
+        { id: 'INV-00121', issueDate: '2025-06-05', amount: 'SAR 420.75', status: 'Paid', downloadUrl: `/receipt/INV-00121` }
     ];
 
     res.render('Customer/reports', { 
@@ -569,3 +643,253 @@ server.listen(port, () => {
   console.log(`✅ Server is running on http://localhost:${port}`);
 });
 
+// Remove the imports: const PDFDocument = require('pdfkit'); and const fs = require('fs');
+// ...
+
+// Route to generate and download invoice receipt PDF
+app.get('/receipt/:invoiceId', async (req, res) => {
+    const invoiceId = req.params.invoiceId;
+    
+    // 1. Fetch Invoice Data (Source of the 'invoice' variable)
+    const invoice = invoicesData.find(inv => inv.id === invoiceId);
+    
+    if (!invoice || invoice.status !== 'Paid') {
+        return res.status(404).send('Paid Invoice details not found.');
+    }
+    
+    // 2. Calculate EJS Variables
+    const waterBefore = Number(invoice.consumptionValue || 0);
+    const sewerBefore = Number(invoice.serviceFee || 0);
+    const tariffBefore = Number(invoice.meterTariff || 0);
+    const consumption = (Number(invoice.endRead) - Number(invoice.startRead)).toFixed(2);
+    
+    const totalBefore = (waterBefore + sewerBefore + tariffBefore).toFixed(2);
+    const totalVAT = (Number(waterBefore * 0.15) + Number(sewerBefore * 0.15) + Number(tariffBefore * 0.15)).toFixed(2);
+    const totalAfter = Number(invoice.totalAmount).toFixed(2); 
+
+    try {
+        // 3. Render EJS to HTML String - POINTING TO CORRECT FILE: receipt.ejs
+        const filePath = path.join(__dirname, 'views', 'Customer', 'partials','receipt.ejs'); // <-- CONFIRMED PATH
+        
+        const htmlContent = await ejs.renderFile(filePath, { 
+            invoice: invoice, // <-- This defines the 'invoice' variable for EJS
+            consumption: consumption,
+            totalBefore: totalBefore,
+            totalVAT: totalVAT,
+            totalAfter: totalAfter
+        });
+
+        // 4. Launch Puppeteer
+        const browser = await puppeteer.launch({ 
+            headless: true, 
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-zygote'
+            ]
+        });
+        const page = await browser.newPage();
+        
+        // Load the HTML content
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        // 5. Generate PDF
+        const pdfBuffer = await page.pdf({ 
+            format: 'A4', 
+            printBackground: true, 
+            margin: {
+                top: '0.2in',
+                right: '0.2in',
+                bottom: '0.2in',
+                left: '0.2in'
+            }
+        });
+
+        await browser.close();
+
+        // 6. Send PDF as a Download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Water_Bill_Receipt_${invoiceId}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        // Log the error and display the friendly message
+        console.error('Puppeteer/PDF Generation Failed:', error.message);
+        res.status(500).send('Error generating downloadable PDF.');
+    }
+});
+
+
+app.get('/reports/generate', requireCustomer, async (req, res) => {
+    const { report_type, startDate, endDate, meterId, format } = req.query;
+
+    if (!startDate || !endDate) {
+        return res.status(400).send('Start Date and End Date are required.');
+    }
+    
+    // Helper function to format date to YYYY-MM-DD reliably, avoiding UTC/ISO issues
+    const formatDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    let reportData = [];
+    let templateData = { 
+        user: req.session.user, 
+        startDate: startDate, 
+        endDate: endDate 
+    };
+    let filename;
+
+    // 1. DATA AGGREGATION & REPORT TYPE VALIDATION
+    if (report_type === 'usage') {
+        // --- USAGE HISTORY DATA LOGIC ---
+        filename = `Usage_Report_${startDate}_to_${endDate}.${format}`;
+        
+        let selectedMeters = meterId !== 'all' ? masterMeterData.filter(m => m.id === meterId) : masterMeterData;
+        let totalConsumption = 0;
+        
+        // CRITICAL FIX: Initialize dates using YYYY, M, D to guarantee local time (no T00:00:00 issues)
+        const partsStart = startDate.split('-');
+        let start = new Date(partsStart[0], partsStart[1] - 1, partsStart[2]); 
+        
+        const partsEnd = endDate.split('-');
+        let end = new Date(partsEnd[0], partsEnd[1] - 1, partsEnd[2]);
+        
+        // Loop robustly from start date up to and including the end date
+        while (start <= end) {
+            
+            const formattedDate = formatDate(start); 
+            
+            selectedMeters.forEach(meter => {
+                const dailyUsage = Math.floor(Math.random() * (400 - 200 + 1)) + 200;
+                
+                reportData.push({
+                    date: formattedDate, 
+                    meterId: meter.id,
+                    location: meter.location,
+                    dailyUsage: dailyUsage.toFixed(0),
+                });
+                totalConsumption += dailyUsage;
+            });
+            
+            // Move to the next day
+            start.setDate(start.getDate() + 1);
+        }
+
+        templateData.meterId = meterId;
+        templateData.reportData = reportData;
+        templateData.totalConsumption = totalConsumption.toFixed(0);
+
+    } else if (report_type === 'statement') {
+        // --- ACCOUNT STATEMENT DATA LOGIC ---
+        filename = `Account_Statement_${startDate}_to_${endDate}.${format}`;
+        
+        // Mock transaction data
+        reportData = [
+            { date: '2025-10-01', description: 'Starting Balance', debit: '0.00', credit: '0.00', balance: '250.00' },
+            { date: '2025-10-05', description: 'Invoice INV-00126', debit: '465.50', credit: '0.00', balance: '-215.50' },
+            { date: '2025-10-15', description: 'Payment Received', debit: '0.00', credit: '465.50', balance: '250.00' }
+        ].filter(row => {
+            // Filter mock data using YYYY, M, D initialization for consistency
+            const partsRow = row.date.split('-');
+            const rowDate = new Date(partsRow[0], partsRow[1] - 1, partsRow[2]);
+
+            const partsStart = startDate.split('-');
+            const startLimit = new Date(partsStart[0], partsStart[1] - 1, partsStart[2]);
+
+            const partsEnd = endDate.split('-');
+            const endLimit = new Date(partsEnd[0], partsEnd[1] - 1, partsEnd[2]);
+
+            return rowDate >= startLimit && rowDate <= endLimit;
+        });
+
+    } else {
+        // Fallback for an invalid report type value
+        return res.status(400).send('Invalid report type requested.');
+    }
+
+    // 2. FORMAT GENERATION
+    if (format === 'csv') {
+        // --- CSV GENERATION LOGIC ---
+        
+        let csvContent = '';
+        let headers;
+
+        if (report_type === 'usage') {
+            headers = ['Date', 'Meter ID', 'Location', 'Daily Usage (gal)'];
+            // Double-check the structure here to ensure date property is accessed
+            csvContent = reportData.map(row => 
+                `${row.date},${row.meterId},"${row.location}",${row.dailyUsage}`
+            ).join('\n');
+            
+        } else if (report_type === 'statement') {
+            headers = ['Date', 'Description', 'Debit (SAR)', 'Credit (SAR)', 'Running Balance (SAR)'];
+            csvContent = reportData.map(row => 
+                `${row.date},"${row.description}",${row.debit},${row.credit},${row.balance}`
+            ).join('\n');
+        }
+        
+        // Prepend headers and send the file
+        const finalCsv = headers.join(',') + '\n' + csvContent;
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        return res.send(finalCsv);
+
+    } else if (format === 'pdf') {
+        // --- PDF GENERATION LOGIC (Puppeteer/EJS) ---
+        
+        let templatePath;
+        if (report_type === 'usage') {
+            templatePath = path.join(__dirname, 'views', 'Customer', 'partials', 'usage-report.ejs');
+        } else { // statement
+            templatePath = path.join(__dirname, 'views', 'Customer', 'partials', 'account-statement.ejs');
+        }
+        
+        try {
+            const htmlContent = await ejs.renderFile(templatePath, templateData);
+
+            // Puppeteer launch logic (must be handled inside the try/catch)
+            const browser = await puppeteer.launch({ 
+                headless: true, 
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--no-zygote'
+                ]
+            });
+            const page = await browser.newPage();
+            
+            await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+            
+            const pdfBuffer = await page.pdf({ 
+                format: 'A4', 
+                printBackground: true, 
+                margin: {
+                    top: '0.2in', right: '0.2in', bottom: '0.2in', left: '0.2in'
+                }
+            });
+
+            await browser.close();
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            return res.send(pdfBuffer);
+            
+        } catch (error) {
+            console.error(`${report_type} Report PDF Generation Failed:`, error.message);
+            return res.status(500).send(`Error generating ${report_type === 'usage' ? 'Usage Report' : 'Account Statement'} PDF.`);
+        }
+
+    } else {
+        // Fallback for an invalid format value
+        return res.status(400).send('Invalid file format requested.');
+    }
+});
