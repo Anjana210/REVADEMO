@@ -8,7 +8,9 @@ const { Server } = require("socket.io");
 // const axios = require('axios'); // Removed
 const cors = require('cors');
 const session = require('express-session');
-const puppeteer = require('puppeteer'); 
+//const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core'); // Use the core version
+const chromium = require('@sparticuz/chromium'); // Use Vercel-compatible chromium 
 const port = process.env.PORT || 4000;
 const ejs = require('ejs'); 
 
@@ -681,16 +683,17 @@ app.get('/receipt/:invoiceId', async (req, res) => {
 
         // NEW (FIXED) CODE:
         const browser = await puppeteer.launch({ 
-            headless: true, 
-            // This line forces Puppeteer to use the automatically downloaded Chromium.
-            executablePath: puppeteer.executablePath(), 
+            // Use the executable from @sparticuz/chromium
             args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--no-zygote'
-            ]
+                ...chromium.args,
+                '--hide-scrollbars',
+                '--disable-web-security',
+                // Keep your existing args, but use spread to include all needed ones
+            ],
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+            ignoreHTTPSErrors: true,
         });
         const page = await browser.newPage();
         
@@ -858,16 +861,17 @@ app.get('/reports/generate', requireCustomer, async (req, res) => {
 
             // NEW (FIXED) CODE:
             const browser = await puppeteer.launch({ 
-                headless: true, 
-                // This line forces Puppeteer to use the automatically downloaded Chromium.
-                executablePath: puppeteer.executablePath(), 
+                // Use the executable from @sparticuz/chromium
                 args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--no-zygote'
-                ]
+                    ...chromium.args,
+                    '--hide-scrollbars',
+                    '--disable-web-security',
+                    // Keep your existing args, but use spread to include all needed ones
+                ],
+                defaultViewport: chromium.defaultViewport,
+                executablePath: await chromium.executablePath(),
+                headless: chromium.headless,
+                ignoreHTTPSErrors: true,
             });
             const page = await browser.newPage();
             
