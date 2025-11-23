@@ -26,7 +26,10 @@ const { Pool } = require('pg'); // --- ADDED --- (Step 1: Import the Pool)
 const pool = new Pool(); // --- ADDED --- (Step 2: Initialize the Pool)
 app.set('view engine', 'ejs');
 app.use(cors({ origin: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+// NOTE: On Linux (Railway), filesystem is case-sensitive. All static assets live under 'Public'.
+app.use(express.static(path.join(__dirname, 'Public')));
+// Explicitly serve uploads (including seeded company-logo) from 'Public/uploads'.
+app.use('/uploads', express.static(path.join(__dirname, 'Public', 'uploads')));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.json({ limit: '10mb' }));
 

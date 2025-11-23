@@ -1317,9 +1317,8 @@ router.get('/api/dashboard/data', requireStaff, async (req, res) => {
 // Multer config for logo upload
 const logoStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        // We save logos in 'public/uploads/'
-        // The 'public' folder is static, so 'uploads/logo.png' will be accessible
-        const uploadPath = path.join(__dirname, 'public', 'uploads');
+        // We save logos in 'Public/uploads/' (capital P) to match the static folder on Linux
+        const uploadPath = path.join(__dirname, 'Public', 'uploads');
         
         // Ensure the directory exists
         fs.mkdir(uploadPath, { recursive: true }, (err) => {
