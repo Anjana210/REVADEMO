@@ -82,9 +82,22 @@
             <div class="mb-6">
                 <div class="border-b border-slate-200 dark:border-gray-700">
                     <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                        <a href="#" id="tab-profiles" class="tab-link border-red-500 text-red-600 dark:text-red-400 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Customer Profiles</a>
-                        <a href="#" id="tab-meters" class="tab-link border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Meters & Tariffs</a>
-                        <a href="#" id="tab-documents" class="tab-link border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Documents</a>
+                        <a href="#" 
+                        id="tab-profiles" 
+                        class="tab-link 
+                               bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white rounded-lg border-b-0
+                               whitespace-nowrap py-4 px-1 font-medium text-sm">Customer Profiles</a>
+
+                     <a href="#" 
+                       id="tab-meters" 
+                       class="tab-link text-slate-500 dark:text-slate-400 border-b-2 border-transparent
+                              hover:text-slate-700 dark:hover:text-slate-300 
+                              whitespace-nowrap py-4 px-1 font-medium text-sm">Meters & Tariffs</a>
+                    <a href="#" 
+                       id="tab-documents" 
+                       class="tab-link text-slate-500 dark:text-slate-400 border-b-2 border-transparent
+                              hover:text-slate-700 dark:hover:text-slate-300 
+                              whitespace-nowrap py-4 px-1 font-medium text-sm">Documents</a>
                     </nav>
                 </div>
             </div>
@@ -623,22 +636,60 @@
                 }
             });
 
-            // --- ORIGINAL WORKING SCRIPT (Tabs and Modals) ---
+            // --- NEW TAB SWITCHING LOGIC ---
             const tabs = document.querySelectorAll('.tab-link');
             const contents = document.querySelectorAll('.tab-content');
+            
+            // Define classes for active (light blue bg) and inactive (default) states
+            const activeClasses = [
+                'bg-blue-100',
+                'text-blue-700',
+                'dark:bg-gray-700',
+                'dark:text-white',
+                'rounded-lg',
+                'border-b-0'
+            ];
+            const inactiveClasses = [
+                'text-slate-500', 
+                'dark:text-slate-400',
+                'border-b-2',           // FIX: Keep bottom border
+                'border-transparent'    // FIX: Make it transparent
+            ];
+            
+            // Define ALL possible active classes (from previous versions) to ensure they are removed
+            const allPossibleActiveClasses = [
+                // Current desired
+                'bg-blue-100', 'text-blue-700', 'dark:bg-gray-700', 'dark:text-white', 'rounded-lg', 'border-b-0',
+                // Remove older blue variants
+                'bg-blue-50', 'dark:bg-blue-900/40', 'dark:text-blue-300', 'dark:bg-blue-900/60', 'dark:text-blue-400',
+                // Old red
+                'bg-red-100', 'text-red-700', 'dark:bg-red-900/60', 'dark:text-red-400',
+                'border-red-500', 'text-red-600', 'dark:text-red-400',
+            ];
+
             tabs.forEach(tab => {
                 tab.addEventListener('click', (e) => {
                     e.preventDefault();
+                    
+                    // Get target content ID
                     const targetId = tab.id.replace('tab-', 'content-');
+                    
+                    // Update tab styles
                     tabs.forEach(t => {
-                        t.classList.remove('border-red-500', 'text-red-600', 'dark:text-red-400');
-                        t.classList.add('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+                        // Remove ALL possible active classes from all tabs
+                        t.classList.remove(...allPossibleActiveClasses);
+                        
+                        // Add inactive classes to all tabs
+                        t.classList.add(...inactiveClasses);
                     });
-                    tab.classList.add('border-red-500', 'text-red-600', 'dark:text-red-400');
-                    tab.classList.remove('border-transparent', 'text-slate-500', 'dark:text-slate-400');
-                    contents.forEach(content => {
-                        content.classList.toggle('hidden', content.id !== targetId);
-                    });
+                    
+                    // Add new active classes to the clicked tab
+                    tab.classList.add(...activeClasses);
+                    // Remove inactive classes from the clicked tab
+                    tab.classList.remove(...inactiveClasses);
+                    
+                    // Show/hide content
+                    contents.forEach(content => { content.classList.toggle('hidden', content.id !== targetId); });
                 });
             });
             const onboardingModal = document.getElementById('onboarding-modal');
@@ -708,10 +759,10 @@
             manageBackdrop.addEventListener('click', closeManageModal);
         });
     </script>
-    <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
+    <!-- <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
         <p>© REVARTIX Confidential, REVARTIX, All Rights Reserved. 2025.</p>
-        <p class="text-right">www.revartix.com | Reva.support@revartix.com</p>
-    </footer>
+        <p class="text-right">www.revartix.com | reva.zone@revartix.com</p>
+    </footer> -->
     <%- include('partials_ad/scripts_ad') %>
 </body>
 </html>

@@ -18,9 +18,9 @@
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-gray-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
-    <div class="flex">
+    <div class="flex overflow-hidden">
 
-        <%- include('partials_ad/sidebar_ad') %>
+        <%- include('partials_ad/sidebar_ad', { activePage: activePage }) %>
 
         <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
             <header class="flex justify-between items-center mb-8">
@@ -30,434 +30,394 @@
                 </div>
                  <div class="flex items-center gap-4">
                     <div class="relative" id="user-dropdown">
-                         <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+              
+                     <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
                             <span class="font-semibold text-sm"><%= user.name %></span>
                             <i class="fas fa-chevron-down text-xs"></i>
-                         </button>
+        
+                     </button>
                         <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-20 border border-slate-200 dark:border-slate-700 py-1">
                             <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                 
                                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
                                 <span>Logout</span>
-                            </a>
+       
+                             </a>
+                       
                          </div>
-                    </div>
+                   </div>
+            
                     <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
                         <i class="fas fa-moon"></i>
                      </button>
+    
                 </div>
             </header>
-            
+    
+         
             <div class="mb-6">
                 <div class="border-b border-slate-200 dark:border-gray-700">
                      <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                        <a href="#" id="tab-settings" class="tab-link border-red-500 text-red-600 dark:text-red-400 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">System Settings</a>
-                        <a href="#" id="tab-roles" class="tab-link border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">User Roles & Permissions</a>
+        
+                         <a href="#" 
+                           id="tab-company" 
+                           class="tab-link 
+                                   bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg border-b-0
+                                   whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Company Details</a>
+
+                         <a href="#" 
+                           id="tab-settings" 
+                           class="tab-link border-transparent text-slate-500 dark:text-slate-400 
+                                  hover:text-slate-700 dark:hover:text-slate-300 
+                                  hover:border-slate-300 dark:hover:border-gray-600 
+                                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">System Settings</a>
+                        <a href="#" 
+                           id="tab-roles" 
+                           class="tab-link border-transparent text-slate-500 dark:text-slate-400 
+                                  hover:text-slate-700 dark:hover:text-slate-300 
+                                  hover:border-slate-300 dark:hover:border-gray-600 
+                                  whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">User Roles & Permissions</a>
+     
                     </nav>
                 </div>
             </div>
 
-            <div id="content-settings" class="tab-content space-y-8">
-                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="space-y-8">
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-slate-200 dark:border-gray-700">
-                             <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">Localization</h3>
-                             <form class="space-y-4">
-                                 <div>
-                                     <label for="language" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Default Language</label>
-                                     <select id="language" class="mt-1 w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm">
-                                         <option>English</option>
-                                         <option>Arabic</option>
-                                     </select>
-                                 </div>
-                                 <div class="grid grid-cols-2 gap-4">
-                                     <div>
-                                         <label for="currency" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Currency</label>
-                                         <input type="text" id="currency" value="SAR" class="mt-1 block w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm">
-                                     </div>
-                                     <div>
-                                         <label for="vat" class="block text-sm font-medium text-slate-700 dark:text-slate-300">VAT Rate (%)</label>
-                                         <input type="number" id="vat" value="15" class="mt-1 block w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm">
-                                     </div>
-                                 </div>
-                             </form>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-slate-200 dark:border-gray-700">
-                             <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">Branding</h3>
-                             <div class="flex items-center gap-6">
-                                <img id="logo-preview" src="https://placehold.co/100x100/ef4444/white?text=Logo" alt="Company Logo" class="h-20 w-20 rounded-lg object-cover">
-                                 <div>
-                                     <label for="logo-upload" class="cursor-pointer bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600 text-sm">
-                                         Upload New Logo
-                                     </label>
-                                     <input type="file" id="logo-upload" class="hidden" accept="image/png, image/jpeg">
-                                     <p class="text-xs text-slate-500 mt-2">PNG or JPG, max 2MB.</p>
-                                 </div>
+            <form id="company-settings-form">
+
+                <div id="content-company" class="tab-content space-y-8 bg-white dark:bg-gray-800 p-6 rounded-b-lg rounded-r-lg shadow-md border border-t-0 border-slate-200 dark:border-gray-700">
+       
+                  
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        
+                        <div class="space-y-8">
+                             <div class="p-6">
+                                <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">Company Logo</h3>
+                                <div class="w-full">
+                                    <div class="border-2 border-dashed border-slate-300 dark:border-gray-600 rounded-xl p-6 flex flex-col items-center justify-center bg-slate-50/40 dark:bg-gray-800/40">
+                                        <div class="relative mb-4">
+                                            <img id="company-logo-preview" src="https://placehold.co/150x150/e2e8f0/475569?text=Logo" alt="Company Logo" class="h-32 w-32 rounded-full object-cover shadow-sm border border-slate-200 dark:border-gray-700">
+                                            <button type="button" id="remove-logo-btn" class="absolute -top-2 -right-2 h-8 w-8 hidden items-center justify-center bg-slate-700 text-white rounded-full hover:bg-slate-800 focus:outline-none">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                        <label for="company-logo-upload" class="cursor-pointer inline-flex items-center gap-2 bg-white dark:bg-gray-700 text-slate-700 dark:text-slate-200 font-medium px-4 py-2 rounded-lg border border-slate-300 dark:border-gray-600 hover:bg-slate-50 dark:hover:bg-gray-600 text-sm">
+                                            <i class="fas fa-upload"></i>
+                                            Upload New Logo
+                                        </label>
+                                        <input type="file" id="company-logo-upload" name="logo-upload" class="hidden" accept="image/png, image/jpeg">
+                                        <input type="hidden" id="existing-logo-url" name="existing_logo_url">
+                                        <p class="text-xs text-slate-500 mt-2">PNG or JPG, max 2MB.</p>
+                                    </div>
+                                </div>
                             </div>
-                             <hr class="my-6 border-slate-200 dark:border-gray-700">
-                             <h4 class="font-semibold text-slate-800 dark:text-white mb-2">Templates & Notifications</h4>
-                             <p class="text-sm text-slate-500 dark:text-slate-400">Customize the invoices, emails, and alerts.</p>
-                             <button id="manage-templates-btn" class="mt-3 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 font-semibold px-4 py-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 text-sm">
-                                Manage Templates
-                             </button>
+                        </div>
+                        <div class="lg:col-span-2 space-y-8">
+                            <div class="p-6">
+          
+                                <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-1">Company Information</h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-3">Edit your company's details below.</p>
+                                 <div class="space-y-4">
+             
+                                     <div>
+  
+                                         <label for="company_name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Name</label>
+                            
+                                         <input type="text" id="company_name" name="company_name" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="Al Safa Tech Solutions">
+    
+                                    </div>
+                                    
+                                    <div>
+                                
+                                        <label for="address" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Address</label>
+                      
+                                        <input type="text" id="address" name="address" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="King Abdullah Rd, Al Mursalat District">
+                                 
+                                    
+                                     </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                         <div>
+                
+   
+                                            <label for="city" class="block text-sm font-medium text-slate-700 dark:text-slate-300">City</label>
+                                            <input type="text" id="city" name="city" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="Riyadh">
+          
+                                         </div>
+                                         <div>
+    
+                                            <label for="postal_code" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Postal Code</label>
+                        
+                                             <input type="text" id="postal_code" name="postal_code" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="12453">
+                      
+                                             </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+     
+                       
+                                         <div>
+                                            <label for="phone" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Phone</label>
+               
+                  
+                                             <input type="text" id="phone" name="phone" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="+966 11 876 5432">
+                                        </div>
+                   
+   
+                                          <div>
+                                            <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
+             
+                 
+                                            <input type="email" id="email" name="email" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="info@company.com">
+                            
+                                         </div>
+                                 
+                                    </div>
+                   
+                                     <div>
+                                        <label for="website" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Website</label>
+               
+                      
+                                        <input type="text" id="website" name="website" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="https://www.company.com/logo.png">
+                                    </div>
+                          
+       
+                                     <div>
+                                         <label for="about" class="block text-sm font-medium text-slate-700 dark:text-slate-300">About</label>
+                        
+                                         <textarea id="about" name="about" rows="4" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="A leading Saudi technology firm specializing in cloud infrastructure and digital transformation services across the Kingdom."></textarea>
+                                    </div>
+                                 </div>
+   
+                           
+                         </div>
                         </div>
                     </div>
+
+                    <div class="flex justify-end mt-8">
+                        <button id="save-company-btn" type="submit" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Save Company Settings</button>
+                    </div>
+
+                </div>
+
+                <div id="content-settings" class="tab-content hidden space-y-8 bg-white dark:bg-gray-800 p-6 rounded-b-lg rounded-r-lg shadow-md border border-t-0 border-slate-200 dark:border-gray-700">
+              
+                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="space-y-8">
+
+                             <div class="p-6 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 shadow-sm">
+
+                                <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-1">Localization</h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Configure language and region settings.</p>
+
+                                 <div class="space-y-4">
+                                    <div>
+                   
+                      
+                                        <label for="default_language" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Default Language</label>
+                                        <select id="default_language" name="default_language" class="mt-1 w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300">
+                      
+  
+                                           <option>English</option>
+                                            <option>Arabic</option>
+              
+                                     
+                                        </select>
+                                    </div>
+    
+                                     <div class="grid grid-cols-2 gap-4">
+                   
+                                        <div>
+                                           <label for="currency" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Currency</label>
+                                             <input type="text" id="currency" name="currency" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="SAR">
+                                        </div>
+                               
+  
+                                        <div>
+                                            <label for="vat_rate" class="block text-sm font-medium text-slate-700 dark:text-slate-300">VAT Rate (%)</label>
+      
+                                    
+                                            <input type="number" id="vat_rate" name="vat_rate" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm focus:ring-2 focus:ring-red-100 focus:border-red-300" placeholder="15">
+                                         </div>
+                                    </div>
+         
+
+                         </div>
+                            </div>
+
+                            <div class="p-6 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 shadow-sm">
+         
+               
+                                <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-1">License Details</h3>
+                                <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Your current subscription and limits.</p>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+         
+                                     <div>
+
+                                        <label for="license_type" class="block text-sm font-medium text-slate-700 dark:text-slate-300">License Type</label>
+                                        <input type="text" id="license_type" name="license_type" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm" readonly>
+  
+                                    </div>
+                                
+                                     <div>
+  
+                                       <label for="license_status" class="block text-sm font-medium text-slate-700 dark:text-slate-300">License Status</label>
+                                        <input type="text" id="license_status" name="license_status" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm" readonly>
+  
+                                    
+                                     </div>
+
+                                    <div>
+                                        <label for="number_of_devices" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Number of Devices</label>
+                                        <input type="text" id="number_of_devices" name="number_of_devices" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm" readonly>
+                                    </div>
+                           
+                                     <div>
+                                       <label for="expiry_date" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Expiry Date</label>
+                                        <input type="text" id="expiry_date" name="expiry_date" class="mt-1 block w-full rounded-xl border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm shadow-sm" placeholder="YYYY-MM-DD" readonly>
+                                    </div>
+                                </div>
+                      
+                           </div>
+    
+                        </div>
+      
+                   
+                        <div class="p-6 rounded-xl border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900/40 shadow-sm">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-slate-800 dark:text-white">System Health</h3>
+                                <button id="health-refresh-btn" type="button" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-sm">Refresh</button>
+                            </div>
+                             <ul id="health-list" class="space-y-3">
+ 
+                                <li data-key="core_service" class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-gray-700/50">
+                                    <div class="flex items-center gap-4">
+                                        <i class="fas fa-cog text-2xl text-slate-500"></i>
+                                        <p class="font-semibold">Core Service Status</p>
+                                    </div>
+                                    <div class="health-status flex items-center gap-2 text-sm"><i class="fas fa-circle"></i><span class="label">-</span></div>
+                                </li>
+  
+                                
+                               <li data-key="bill_engine" class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-gray-700/50">
+                                   <div class="flex items-center gap-4">
+                                       <i class="fas fa-print text-2xl text-slate-500"></i>
+                                       <p class="font-semibold">Bill Generation Engine</p>
+                                   </div>
+                                   <div class="health-status flex items-center gap-2 text-sm"><i class="fas fa-circle"></i><span class="label">-</span></div>
+                               </li>
+                               <li data-key="pending_jobs" class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-gray-700/50">
+                                   <div class="flex items-center gap-4">
+                                       <i class="fas fa-chart-line text-2xl text-slate-500"></i>
+                                       <p class="font-semibold">Pending Jobs</p>
+                                   </div>
+                                   <div class="health-status flex items-center gap-2 text-sm"><i class="fas fa-circle"></i><span class="label">0 Waiting</span></div>
+                               </li>
+                               <li data-key="avg_processing" class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-gray-700/50">
+                                   <div class="flex items-center gap-4">
+                                       <i class="fas fa-stopwatch text-2xl text-slate-500"></i>
+                                       <p class="font-semibold">Avg. Processing Time</p>
+                                   </div>
+                                   <div class="health-status flex items-center gap-2 text-sm"><i class="fas fa-circle"></i><span class="label">-</span></div>
+                               </li>
+                               <li data-key="security" class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-gray-700/50">
+                                   <div class="flex items-center gap-4">
+                                       <i class="fas fa-shield-alt text-2xl text-slate-500"></i>
+                                       <p class="font-semibold">Security Status</p>
+                                   </div>
+                                   <div class="health-status flex items-center gap-2 text-sm"><i class="fas fa-circle"></i><span class="label">-</span></div>
+                               </li>
+  
+                               </ul>
+                         </div>
+                    </div>
+     
+                </div>
+
+         
+                 <div id="content-roles" class="tab-content hidden bg-white dark:bg-gray-800 rounded-b-lg rounded-r-lg shadow-md border border-t-0 border-slate-200 dark:border-gray-700">
+                    <% const staffList = (typeof staffUsers !== 'undefined' && staffUsers) ? staffUsers : [];
+                       const masterUser = staffList.find(u => u.role === 'master');
+                       const operatorUser = staffList.find(u => u.role === 'operator'); %>
                     
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-slate-200 dark:border-gray-700">
-                         <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">System Health</h3>
-                         <ul class="space-y-4">
-                            <li class="flex items-center justify-between p-3 rounded-md bg-slate-50 dark:bg-gray-700/50">
-                                <div class="flex items-center gap-4">
-                                    <i class="fas fa-database text-2xl text-slate-500"></i>
-                                    <p class="font-semibold">Database Connection</p>
-                                </div>
-                                <div class="flex items-center gap-2 text-sm text-green-600 font-bold"><i class="fas fa-check-circle"></i> Healthy</div>
-                            </li>
-                             <li class="flex items-center justify-between p-3 rounded-md bg-slate-50 dark:bg-gray-700/50">
-                                <div class="flex items-center gap-4">
-                                    <i class="fas fa-cogs text-2xl text-slate-500"></i>
-                                    <p class="font-semibold">Meter API Service</p>
-                                </div>
-                                <div class="flex items-center gap-2 text-sm text-green-600 font-bold"><i class="fas fa-check-circle"></i> Operational</div>
-                            </li>
-                             <li class="flex items-center justify-between p-3 rounded-md bg-slate-50 dark:bg-gray-700/50">
-                                <div class="flex items-center gap-4">
-                                    <i class="fas fa-envelope text-2xl text-slate-500"></i>
-                                    <p class="font-semibold">Mail Server</p>
-                                </div>
-                                <div class="flex items-center gap-2 text-sm text-yellow-600 font-bold"><i class="fas fa-exclamation-triangle"></i> Degraded Performance</div>
-                            </li>
-                             <li class="flex items-center justify-between p-3 rounded-md bg-slate-50 dark:bg-gray-700/50">
-                                <div class="flex items-center gap-4">
-                                    <i class="fas fa-history text-2xl text-slate-500"></i>
-                                    <p class="font-semibold">Background Jobs</p>
-                                </div>
-                                 <div class="flex items-center gap-2 text-sm text-green-600 font-bold"><i class="fas fa-check-circle"></i> Running</div>
-                            </li>
-                         </ul>
-                    </div>
-                </div>
-                 <div class="flex justify-end">
-                     <button id="save-settings-btn" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700">Save Settings</button>
-                </div>
-            </div>
 
-            <div id="content-roles" class="tab-content hidden">
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-slate-200 dark:border-gray-700">
-                    <div class="p-4 border-b border-slate-200 dark:border-gray-700 flex justify-between items-center">
-                        <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Users</h3>
-                        <button id="add-user-btn" class="text-red-500 hover:text-red-700"><i class="fas fa-plus-circle text-xl"></i></button>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full">
-                            <thead class="bg-slate-50 dark:bg-gray-700/50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
-                                     <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Login</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="user-list-tbody" class="divide-y divide-slate-200 dark:divide-gray-700">
-                                </tbody>
-                        </table>
+                    <div class="p-6">
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">Users</h3>
+                            <div class="overflow-x-auto rounded-lg border border-slate-200 dark:border-gray-700">
+                                <table id="roles-table" class="min-w-full">
+                                    <thead class="bg-slate-50 dark:bg-gray-700/50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Role</th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Username</th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-200 dark:divide-gray-700">
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800 dark:text-white">Master (Read & Write)</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300"><%= (masterUser && masterUser.username) || '' %></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <% if (masterUser && masterUser.is_active !== false) { %>
+                                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Confirmed</span>
+                                                <% } else { %>
+                                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">Pending</span>
+                                                <% } %>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <a href="#" data-role="master" data-username="<%= (masterUser && masterUser.username) || '' %>" class="edit-user-link text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 font-semibold">Edit User</a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-800 dark:text-white">Operator (Read Only)</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 dark:text-slate-300"><%= (operatorUser && operatorUser.username) || '' %></td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <% if (operatorUser && operatorUser.is_active !== false) { %>
+                                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Confirmed</span>
+                                                <% } else { %>
+                                                    <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">Pending</span>
+                                                <% } %>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <a href="#" data-role="operator" data-username="<%= (operatorUser && operatorUser.username) || '' %>" class="edit-user-link text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 font-semibold">Edit User</a>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        
                     </div>
                 </div>
-            </div>
 
-        </main>
+                
+                
+            </form>
+            </main>
     </div>
 
     <div id="generic-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
         <div class="modal-backdrop fixed inset-0 bg-black/50"></div>
         <div id="modal-content" class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md m-4 z-10">
-            <div class="flex justify-between items-center p-5 border-b border-slate-200 dark:border-gray-700">
+    
+                 <div class="flex justify-between items-center p-5 border-b border-slate-200 dark:border-gray-700">
                 <h3 id="modal-title" class="text-xl font-semibold text-slate-900 dark:text-white">Modal Title</h3>
                 <button class="modal-close-btn text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="fas fa-times text-xl"></i></button>
+     
             </div>
             <div id="modal-body" class="p-6">
-                </div>
+         
+                 </div>
             <div class="flex justify-end items-center p-4 bg-slate-50 dark:bg-gray-800/50 rounded-b-lg">
                 <button class="modal-close-btn bg-white dark:bg-gray-700 py-2 px-4 border border-slate-300 dark:border-gray-600 rounded-md text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-gray-600">Close</button>
+             
                 <button id="modal-action-btn" class="ml-3 py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700">Action</button>
-            </div>
+ 
+                     </div>
         </div>
     </div>
     
-     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- Main Tab Switching Logic ---
-            const tabs = document.querySelectorAll('.tab-link');
-            const contents = document.querySelectorAll('.tab-content');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const targetId = tab.id.replace('tab-', 'content-');
-                    tabs.forEach(t => {
-                        t.classList.remove('border-red-500', 'text-red-600', 'dark:text-red-400');
-                        t.classList.add('border-transparent', 'text-slate-500', 'dark:text-slate-400');
-                    });
-                    tab.classList.add('border-red-500', 'text-red-600', 'dark:text-red-400');
-                    tab.classList.remove('border-transparent', 'text-slate-500', 'dark:text-slate-400');
-                    contents.forEach(content => { content.classList.toggle('hidden', content.id !== targetId); });
-                });
-            });
-
-            // --- Modal Handling ---
-            const genericModal = document.getElementById('generic-modal');
-            const modalContent = document.getElementById('modal-content');
-            const modalTitle = document.getElementById('modal-title');
-            const modalBody = document.getElementById('modal-body');
-            const modalActionBtn = document.getElementById('modal-action-btn');
-            let currentModalAction = null;
-            const openModal = (title, content, actionText, actionCallback, size = 'md') => {
-                modalTitle.textContent = title;
-                modalBody.innerHTML = content;
-                modalActionBtn.textContent = actionText;
-                currentModalAction = actionCallback;
-                
-                modalContent.classList.remove('max-w-md', 'max-w-4xl');
-                if(size === 'lg') {
-                    modalContent.classList.add('max-w-4xl');
-                } else {
-                    modalContent.classList.add('max-w-md');
-                }
-
-                genericModal.classList.remove('hidden');
-                genericModal.classList.add('flex');
-            };
-            const closeModal = () => {
-                genericModal.classList.add('hidden');
-                genericModal.classList.remove('flex');
-                currentModalAction = null;
-            };
-            
-            genericModal.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal-backdrop') || e.target.closest('.modal-close-btn')) {
-                    closeModal();
-                }
-            });
-            modalActionBtn.addEventListener('click', () => {
-                if (currentModalAction) {
-                    currentModalAction();
-                }
-            });
-            
-            // --- System Settings Functionality ---
-            document.getElementById('save-settings-btn').addEventListener('click', (e) => {
-                const btn = e.target;
-                btn.textContent = 'Saved!';
-                btn.classList.add('bg-green-600', 'hover:bg-green-700');
-                btn.classList.remove('bg-red-600', 'hover:bg-red-700');
-                setTimeout(() => {
-                    btn.textContent = 'Save Settings';
-                    btn.classList.remove('bg-green-600', 'hover:bg-green-700');
-                    btn.classList.add('bg-red-600', 'hover:bg-red-700');
-                }, 2000);
-            });
-
-            const logoUploadInput = document.getElementById('logo-upload');
-            const logoPreview = document.getElementById('logo-preview');
-            logoUploadInput.addEventListener('change', () => {
-                if (logoUploadInput.files && logoUploadInput.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        logoPreview.src = e.target.result;
-                    };
-                    reader.readAsDataURL(logoUploadInput.files[0]);
-                }
-            });
-            document.getElementById('manage-templates-btn').addEventListener('click', () => {
-                openModal('Manage Templates', '<p>This is where you would edit email, invoice, and notification templates.</p>', 'Save Changes', () => { alert('Template changes saved!'); closeModal(); });
-            });
-
-            // --- User Roles & Permissions Functionality ---
-            let users = {
-                'user1': { name: 'Abdullah Al-Qahtani', email: 'admin@reva.com', status: 'Confirmed', permissions: { billing_access: 'manager', 'perm-apply-discounts': true, customer_access: 'user', meter_access: 'user', analytics_access: 'viewer', dashboard_access: 'viewer', admin_access: 'admin' }},
-                'user2': { name: 'Fatima Al-Mutairi', email: 'finance@reva.com', status: 'Confirmed', permissions: { billing_access: 'user', 'perm-apply-discounts': true, customer_access: 'viewer', meter_access: 'viewer', analytics_access: 'viewer', dashboard_access: 'viewer', admin_access: 'none' }},
-                'user3': { name: 'Omar Al-Harbi', email: 'operator@reva.com', status: 'Pending', permissions: { billing_access: 'viewer', 'perm-apply-discounts': false, customer_access: 'user', meter_access: 'user', analytics_access: 'none', dashboard_access: 'viewer', admin_access: 'none' }}
-            };
-            const userListTbody = document.getElementById('user-list-tbody');
-            let activeUserId = null;
-
-            const renderUserList = () => {
-                userListTbody.innerHTML = '';
-                for (const userId in users) {
-                    const user = users[userId];
-                    const userRow = document.createElement('tr');
-                    userRow.className = 'user-list-item cursor-pointer hover:bg-slate-50 dark:hover:bg-gray-700';
-                    userRow.dataset.userId = userId;
-
-                    let statusBadge = '';
-                    if (user.status === 'Confirmed') {
-                        statusBadge = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Confirmed</span>`;
-                    } else {
-                        statusBadge = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300">Pending</span>`;
-                    }
-
-                    userRow.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10">
-                                    <img class="h-10 w-10 rounded-full" src="https://placehold.co/40x40/e2e8f0/475569?text=${user.name.charAt(0)}" alt="">
-                                </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-slate-900 dark:text-white">${user.name}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">${user.email}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                    `;
-                    userListTbody.appendChild(userRow);
-                }
-            };
-
-            const createPermissionsFormHTML = (user) => {
-                const p = user.permissions;
-                const isChecked = (group, value) => p[group] === value ? 'checked' : '';
-                const isCheckedBox = (perm) => p[perm] ? 'checked' : '';
-
-                return `
-                    <div id="permissions-form-modal" class="space-y-6 h-[60vh] overflow-y-auto pr-2">
-                        <div class="bg-slate-50 dark:bg-gray-900/50 p-4 rounded-lg border border-slate-200 dark:border-gray-700">
-                            <h4 class="font-semibold text-slate-800 dark:text-slate-200 mb-3">Account Actions</h4>
-                            <div class="space-y-3">
-                                <div>
-                                    <label for="new-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Set New Password</label>
-                                    <input type="password" id="new-password" placeholder="••••••••" class="mt-1 block w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 sm:text-sm">
-                                </div>
-                                <button id="deactivate-user-btn" class="w-full bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 text-sm">Deactivate User</button>
-                                <div class="text-center pt-2">
-                                     <button type="button" id="delete-user-btn" class="text-sm font-medium text-red-600 hover:underline">Delete User Permanently</button>
-                                </div>
-                            </div>
-                        </div>
-                        <hr class="border-slate-200 dark:border-gray-700">
-                        <div>
-                            <h4 class="font-semibold text-slate-800 dark:text-slate-200 mb-2">Billing & Invoicing</h4>
-                            <div class="space-y-2"><label class="flex items-center"><input type="radio" name="billing_access" value="none" ${isChecked('billing_access', 'none')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">No Access</span></label><label class="flex items-center"><input type="radio" name="billing_access" value="viewer" ${isChecked('billing_access', 'viewer')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">View Only</span></label><label class="flex items-center"><input type="radio" name="billing_access" value="user" ${isChecked('billing_access', 'user')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">User</span></label><label class="flex items-center"><input type="radio" name="billing_access" value="manager" ${isChecked('billing_access', 'manager')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">Manager</span></label></div>
-                            <div class="pl-6 mt-3 border-l-2 border-slate-200 dark:border-gray-700"><label class="flex items-center"><input type="checkbox" id="perm-apply-discounts" ${isCheckedBox('perm-apply-discounts')} class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"><span class="ml-2 text-sm">Allow Discounts</span></label></div>
-                        </div>
-                        <div>
-                             <h4 class="font-semibold text-slate-800 dark:text-slate-200 mb-2">Customer Management</h4>
-                             <div class="space-y-2"><label class="flex items-center"><input type="radio" name="customer_access" value="none" ${isChecked('customer_access', 'none')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">No Access</span></label><label class="flex items-center"><input type="radio" name="customer_access" value="viewer" ${isChecked('customer_access', 'viewer')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">View Only</span></label><label class="flex items-center"><input type="radio" name="customer_access" value="user" ${isChecked('customer_access', 'user')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">Create & Edit</span></label></div>
-                        </div>
-                        <div>
-                             <h4 class="font-semibold text-slate-800 dark:text-slate-200 mb-2">Meter Operations</h4>
-                            <div class="space-y-2"><label class="flex items-center"><input type="radio" name="meter_access" value="none" ${isChecked('meter_access', 'none')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">No Access</span></label><label class="flex items-center"><input type="radio" name="meter_access" value="viewer" ${isChecked('meter_access', 'viewer')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">View Only</span></label><label class="flex items-center"><input type="radio" name="meter_access" value="user" ${isChecked('meter_access', 'user')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">Operator</span></label></div>
-                         </div>
-                        <div>
-                             <h4 class="font-semibold text-slate-800 dark:text-slate-200 mb-2">Analytics & Reports</h4>
-                             <div class="space-y-2"><label class="flex items-center"><input type="radio" name="analytics_access" value="none" ${isChecked('analytics_access', 'none')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">No Access</span></label><label class="flex items-center"><input type="radio" name="analytics_access" value="viewer" ${isChecked('analytics_access', 'viewer')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">View Access</span></label></div>
-                        </div>
-                        <div>
-                             <h4 class="font-semibold text-slate-800 dark:text-slate-200 mb-2">Dashboard</h4>
-                             <div class="space-y-2"><label class="flex items-center"><input type="radio" name="dashboard_access" value="none" ${isChecked('dashboard_access', 'none')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">No Access</span></label><label class="flex items-center"><input type="radio" name="dashboard_access" value="viewer" ${isChecked('dashboard_access', 'viewer')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">View Access</span></label></div>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-slate-800 dark:text-slate-200 mb-2">Administration</h4>
-                            <div class="space-y-2"><label class="flex items-center"><input type="radio" name="admin_access" value="none" ${isChecked('admin_access', 'none')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">No Access</span></label><label class="flex items-center"><input type="radio" name="admin_access" value="admin" ${isChecked('admin_access', 'admin')} class="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"><span class="ml-2 text-sm">Administrator</span></label></div>
-                        </div>
-                    </div>
-                `;
-            };
-
-            userListTbody.addEventListener('click', (e) => {
-                const userRow = e.target.closest('.user-list-item');
-                if (userRow) {
-                    const userId = userRow.dataset.userId;
-                    activeUserId = userId;
-                    const user = users[userId];
-                    const formHTML = createPermissionsFormHTML(user);
-                    
-                    openModal(`Editing: ${user.name}`, formHTML, 'Save Permissions', () => {
-                         const newPermissions = {};
-                        const formInModal = document.getElementById('permissions-form-modal');
-                        const newPassword = formInModal.querySelector('#new-password').value;
-                         if(newPassword) {
-                            alert(`Password changed for ${user.name}.`);
-                        }
-                        
-                         formInModal.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]').forEach(input => {
-                             if (input.type === 'radio') {
-                                 newPermissions[input.name] = input.value;
-                             } else {
-                                  newPermissions[input.id] = input.checked;
-                             }
-                        });
-                        users[activeUserId].permissions = newPermissions;
-                        alert(`${user.name}'s permissions have been updated.`);
-                        closeModal();
-                    }, 'lg');
-
-                    const deactivateBtn = document.getElementById('deactivate-user-btn');
-                    if (deactivateBtn) {
-                        deactivateBtn.addEventListener('click', () => {
-                             if (confirm(`Are you sure you want to deactivate ${user.name}?`)) {
-                                alert(`${user.name} has been deactivated.`);
-                                closeModal();
-                            }
-                        });
-                    }
-
-                    const deleteBtn = document.getElementById('delete-user-btn');
-                    if(deleteBtn) {
-                        deleteBtn.addEventListener('click', () => {
-                            if (confirm(`Are you sure you want to permanently delete ${user.name}? This action cannot be undone.`)) {
-                                 delete users[userId];
-                                renderUserList();
-                                alert(`${user.name} has been deleted.`);
-                                 closeModal();
-                            }
-                        });
-                    }
-                }
-            });
-            document.getElementById('add-user-btn').addEventListener('click', () => {
-                const content = `
-                    <div class="space-y-4">
-                        <div>
-                            <label for="new-user-name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Full Name</label>
-                            <input type="text" id="new-user-name" class="mt-1 block w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" required>
-                        </div>
-                        <div>
-                             <label for="new-user-email" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
-                            <input type="email" id="new-user-email" class="mt-1 block w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" required>
-                        </div>
-                         <div class="pt-2">
-                            <label class="flex items-center">
-                                <input type="checkbox" id="send-invitation" class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500" checked>
-                                 <span class="ml-2 text-sm text-slate-600 dark:text-slate-300">Send invitation email</span>
-                            </label>
-                        </div>
-                    </div>`;
-                openModal('Add New User', content, 'Add User', () => {
-                    const name = document.getElementById('new-user-name').value;
-                    const email = document.getElementById('new-user-email').value;
-                    const sendInvitation = document.getElementById('send-invitation').checked;
-                    if (name && email) {
-                        const newId = 'user' + (Object.keys(users).length + 1);
-                        users[newId] = {
-                            name, email, status: 'Pending',
-                            permissions: { billing_access: 'none', 'perm-apply-discounts': false, customer_access: 'none', meter_access: 'none', analytics_access: 'none', dashboard_access: 'none', admin_access: 'none' }
-                        };
-                        renderUserList();
-                        if (sendInvitation) {
-                            alert(`User ${name} added and invitation sent to ${email}.`);
-                        } else {
-                            alert(`User ${name} added.`);
-                        }
-                        closeModal();
-                    }
-                });
-            });
-
-            renderUserList();
-        });
-    </script>
-        <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
-        <p>© REVARTIX Confidential, REVARTIX, All Rights Reserved. 2025.</p>
-        <p class="text-right">www.revartix.com | Reva.support@revartix.com</p>
-    </footer>
+    <script src="/js/settings_tailwind.js"></script>
     <%- include('partials_ad/scripts_ad') %>
 </body>
 </html>

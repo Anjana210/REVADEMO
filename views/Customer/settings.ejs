@@ -47,7 +47,7 @@
             <div>
                 <div class="border-b border-slate-200 dark:border-slate-700">
                     <nav class="flex space-x-8" aria-label="Tabs">
-                        <button data-tab-target="#profile" class="tab-link active-tab font-medium whitespace-nowrap py-3 px-1 border-b-2 border-[#C0392B] text-[#C0392B]">
+                        <button data-tab-target="#profile" class="tab-link active-tab font-medium whitespace-nowrap py-3 px-1 border-b-0 rounded-lg bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white">
                             Profile
                         </button>
                         <button data-tab-target="#payment" class="tab-link text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-medium whitespace-nowrap py-3 px-1 border-b-2 border-transparent">
@@ -219,11 +219,11 @@
             link.addEventListener('click', () => {
                 const target = document.querySelector(link.dataset.tabTarget);
                 tabLinks.forEach(l => {
-                    l.classList.remove('active-tab', 'border-[#C0392B]', 'text-[#C0392B]');
-                    l.classList.add('text-slate-500', 'dark:text-slate-400', 'border-transparent');
+                    l.classList.remove('active-tab', 'bg-blue-50', 'text-blue-700', 'dark:bg-blue-900/40', 'dark:text-blue-300', 'border-b-0', 'rounded-lg');
+                    l.classList.add('text-slate-500', 'dark:text-slate-400', 'border-b-2', 'border-transparent');
                 });
-                link.classList.add('active-tab', 'border-[#C0392B]', 'text-[#C0392B]');
-                link.classList.remove('text-slate-500', 'dark:text-slate-400', 'border-transparent');
+                link.classList.add('active-tab', 'bg-blue-50', 'text-blue-700', 'dark:bg-blue-900/40', 'dark:text-blue-300', 'border-b-0', 'rounded-lg');
+                link.classList.remove('text-slate-500', 'dark:text-slate-400', 'border-b-2', 'border-transparent');
                 tabPanels.forEach(panel => {
                     panel.classList.add('hidden');
                 });
@@ -232,9 +232,9 @@
         });
     });
     </script>
-        <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
+    <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
         <p>© REVARTIX Confidential, REVARTIX, All Rights Reserved. 2025.</p>
-        <p class="text-right">www.revartix.com | Reva.support@revartix.com</p>
+        <p class="text-right">www.revartix.com | reva.zone@revartix.com</p>
     </footer>
 
 <%- include('partials/scripts') %>

@@ -44,5 +44,45 @@
                 }
             });
         }
+
+        // --- Geolocation logging for staff (master/operator) ---
+        try {
+            const isStaff = <%- JSON.stringify(!!(user && (user.role === 'admin' || user.role === 'operator'))) %>;
+            const hasCompany = <%- JSON.stringify(!!(user && user.companyId)) %>;
+            if (isStaff && hasCompany && 'geolocation' in navigator) {
+                const LS_KEY = 'reva_last_geo_sent_at';
+                const SS_KEY = 'reva_geo_sent_session';
+                const now = Date.now();
+                const last = Number(localStorage.getItem(LS_KEY) || '0');
+                const sentThisSession = sessionStorage.getItem(SS_KEY) === '1';
+                const shouldSend = !sentThisSession || !last || (now - last) > (10 * 60 * 1000);
+                if (shouldSend) {
+                    navigator.geolocation.getCurrentPosition(async (pos) => {
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        try {
+                            console.log('[Geo] success coords', { lat, lng });
+                            await fetch('/api/v1/activity/location', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ lat, lng, action: 'LOGIN' })
+                            }).then(r => { console.log('[Geo] server response (success)', r.status); return r; });
+                            localStorage.setItem(LS_KEY, String(Date.now()));
+                            sessionStorage.setItem(SS_KEY, '1');
+                        } catch (e) { /* ignore */ }
+                    }, async (error) => {
+                        console.warn('[Geo] error callback', error && (error.code + ':' + error.message));
+                        try {
+                            await fetch('/api/v1/activity/location', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ lat: null, lng: null, action: 'LOCATION_DENIED' })
+                            }).then(r => { console.log('[Geo] server response (denied)', r.status); return r; });
+                            sessionStorage.setItem(SS_KEY, '1');
+                        } catch (e) { /* ignore */ }
+                    }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
+                }
+            }
+        } catch (_) { /* ignore geolocation errors */ }
     });
 </script>

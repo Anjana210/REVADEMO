@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+ <title>Water Service Bill | INV-<%= bill.upload_month.replace('-', '') %>-<%= bill.device_serialno %></title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            // RED/MAROON PRIMARY COLOR
+            primary: "#8B0000",
+            "background-light": "#FFFFFF",
+            "background-dark": "#121212",
+            "surface-light": "#F5F5F5", 
+            "surface-dark": "#1E1E1E",
+            "text-light": "#000000",
+            "text-dark": "#FFFFFF",
+            "text-secondary-light": "#6B7280",
+            "text-secondary-dark": "#9CA3AF",
+          },
+          fontFamily: {
+            display: ["Roboto", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "0.5rem",
+          },
+        },
+      },
+    };
+  </script>
+<style>
+    body {
+      font-family: 'Roboto', sans-serif;
+    }
+    /* CRITICAL PRINT STYLES FOR SINGLE-PAGE PDF */
+    @media print {
+        section { 
+            page-break-inside: avoid;
+        }
+        /* Maximizes container width */
+        .container-full { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        
+        /* Font and Spacing Adjustments */
+        .text-xs { font-size: 0.7rem !important; }
+        .text-sm { font-size: 0.8rem !important; }
+        .text-base { font-size: 0.9rem !important; }
+        .p-4 { padding: 0.5rem !important; }
+        .p-6 { padding: 1rem !important; } /* Adjusted main padding */
+
+        /* Force colors */
+        .bg-primary { background-color: #8B0000 !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
+        .bg-primary\/10 { background-color: #f5eaea !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
+        .text-primary { color: #8B0000 !important; }
+        .text-white { color: #FFFFFF !important; }
+        .shadow-lg { box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark font-display">
+<div class="container-full mx-auto p-0"> <div class="bg-card-light dark:bg-card-dark rounded-none shadow-none overflow-hidden">
+
+<header class="bg-primary text-white p-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-2xl font-bold">Water Service Bill</h1>
+        <p class="text-sm">Simplified Tax Invoice</p>
+    </div>
+    <div>
+        <% if (company_logo_url) { %>
+            <img src="<%= company_logo_url %>" alt="Company Logo" class="max-h-12 w-auto">
+        <% } else { %>
+            <span class="text-3xl font-bold block">REVA</span>
+        <% } %>
+    </div>
+</header>
+<main class="p-6"> 
+
+<section class="grid grid-cols-2 gap-8 mb-6">
+<div>
+ <h2 class="text-lg font-bold text-primary mb-3 border-b border-gray-300 dark:border-gray-700 pb-1">Customer Information</h2>
+<div class="grid grid-cols-2 gap-x-2 gap-y-1 text-sm"> 
+<span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">Name:</span>
+ <span class="text-right"><%= bill.customer_name %></span>
+<span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">Address:</span>
+ <span class="text-right">123 Example Street, City</span>
+<span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">Account Number:</span>
+ <span class="text-right"><%= bill.customer_hash %></span>
+<span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">Device Serial ID:</span>
+ <span class="text-right"><%= bill.device_serialno %></span>
+</div>
+</div>
+<div>
+<h2 class="text-lg font-bold text-primary mb-3 border-b border-gray-300 dark:border-gray-700 pb-1">Bill Details</h2>
+<div class="grid grid-cols-2 gap-x-2 gap-y-1 text-sm"> 
+<span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">Bill Number:</span>
+ <span class="text-right">INV-<%= bill.upload_month.replace('-', '') %>-<%= bill.device_serialno %></span>
+<span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">Bill Issue Date:</span>
+ <span class="text-right"><%= inv_date %></span>
+<span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">Due Date:</span>
+ <span class="text-right"><%= dueDateStr %></span>
+<span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">Bill Period:</span>
+ <span class="text-right"><%= (bill_start && bill_end) ? '30 Days' : 'N/A' %></span>
+</div>
+</div>
+</section>
+
+<section class="mb-6 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+<h2 class="text-lg font-bold text-primary mb-3">Bill Details</h2>
+<div class="grid grid-cols-3 gap-4 text-center">
+<div class="bg-primary/10 dark:bg-primary/20 p-3 rounded-lg">
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm"> Bill  Start Date</p>
+ <p class="font-semibold text-base"><%= bill_start || '-' %></p>
+</div>
+<div class="bg-primary/10 dark:bg-primary/20 p-3 rounded-lg">
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm">Bill End Date</p>
+ <p class="font-semibold text-base"><%= bill_end || '-' %></p>
+</div>
+<div class="bg-primary/10 dark:bg-primary/20 p-3 rounded-lg">
+<p class="text-text-secondary-light dark:text-text-secondary-dark text-sm">Total Consumption</p>
+ <p class="font-semibold text-base"><%= consumption_m3 %> m³</p>
+</div>
+</div>
+</section>
+
+<section class="mb-6">
+<h2 class="text-lg font-bold text-primary mb-3">Billing Summary</h2>
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left">
+<thead class="bg-gray-100 dark:bg-gray-800">
+<tr>
+ <th class="p-2 font-semibold">Bill Information</th>
+<th class="p-2 font-semibold text-right">Before VAT (SAR)</th>
+ <th class="p-2 font-semibold text-right">VAT (<%= vat_rate_num.toFixed(2) %>%) (SAR)</th>
+<th class="p-2 font-semibold text-right">After VAT (SAR)</th>
+</tr>
+</thead>
+<tbody>
+    <% billSummary.forEach(item => { %>
+        <tr class="border-b border-gray-200 dark:border-gray-700">
+ <td class="p-2"><%= item.description %></td>
+ <td class="p-2 text-right"><%= item.before_vat.toFixed(2) %></td>
+ <td class="p-2 text-right"><%= item.vat.toFixed(2) %></td>
+ <td class="p-2 text-right"><%= item.after_vat.toFixed(2) %></td>
+        </tr>
+    <% }); %>
+</tbody>
+<tfoot>
+<tr class="font-bold">
+<td class="p-2">Total (SAR)</td>
+ <td class="p-2 text-right"><%= totalBeforeVat.toFixed(2) %></td>
+ <td class="p-2 text-right"><%= totalVat.toFixed(2) %></td>
+ <td class="p-2 text-right"><%= totalAfterVat.toFixed(2) %></td>
+</tr>
+</tfoot>
+</table>
+</div>
+</section>
+
+<section class="grid grid-cols-2 gap-6 items-center mb-6">
+<div class="bg-primary/10 dark:bg-primary/20 p-4 rounded-lg text-center">
+        <p class="text-text-secondary-light dark:text-text-secondary-dark text-sm">Current Consumption is equivalent to</p>
+        <p class="text-4xl font-bold text-primary my-1"><%= (parseFloat(consumption_m3) / 18).toFixed(2) %></p>
+        <p class="text-base">Tankers (~18 m³ per tanker)</p>
+<div class="flex justify-center items-center mt-2">
+<span class="text-5xl text-primary opacity-80">🚚</span> 
+</div>
+</div>
+<div class="bg-primary text-white p-4 rounded-lg text-center shadow-lg">
+<p class="text-base opacity-80">Total Amount (SAR)</p>
+ <p class="text-5xl font-bold my-1"><%= totalAfterVat.toFixed(2) %></p>
+<div class="text-xs mt-2 whitespace-nowrap">
+ <span>Due Start Date: <%= inv_date %></span>
+<span class="mx-2">|</span>
+ <span>Payment Deadline: <%= dueDateStr %></span> 
+</div>
+</div>
+</section>
+</main>
+
+<footer class="p-3 text-center text-xs text-text-secondary-light dark:text-text-secondary-dark border-t border-gray-200 dark:border-gray-700">
+<p class="text-[0.7rem] text-text-secondary-light dark:text-text-secondary-dark">
+    This is a system generated invoice. For questions, contact [reva.zone@revartix.com]</a>
+</p>
+</footer>
+
+</div>
+</div>
+</body>
+</html>

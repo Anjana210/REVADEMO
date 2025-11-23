@@ -1,0 +1,911 @@
+require('dotenv').config();
+const express = require('express');
+const app = express();
+const path = require('node:path');
+const http = require('http');
+// const PDFDocument = require('pdfkit');
+// const fs = require('fs');
+const { Server } = require("socket.io");
+// const axios = require('axios'); // Removed
+const cors = require('cors');
+const session = require('express-session');
+//const puppeteer = require('puppeteer');
+//const puppeteer = require('puppeteer-core'); // Use the core version
+const puppeteer = require('puppeteer');
+//const chromium = require('@sparticuz/chromium'); // Use Vercel-compatible chromium 
+const port = process.env.PORT || 4000;
+const ejs = require('ejs'); 
+const { Pool } = require('pg'); // --- ADDED --- (Step 1: Import the Pool)
+
+const pool = new Pool(); // --- ADDED --- (Step 2: Initialize the Pool)
+
+app.set('view engine', 'ejs');
+app.use(cors({ origin: true }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
+
+app.use(session({
+  secret: 'a-secure-secret-key-for-revartix',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false }
+}));
+
+const { requireAdmin, requireCustomer } = require('./middleware.js');
+
+// --- ADDED --- (Step 3: Create middleware to load settings for Admin pages)
+const loadCompanySettings = async (req, res, next) => {
+    // We attach settings to res.locals, which are automatically available in EJS templates
+    res.locals.companyLogoUrl = null; // Set a default
+    let client;
+    try {
+        client = await pool.connect();
+        // Fetch the logo_url from the company_settings table
+        const result = await client.query("SELECT logo_url FROM company_settings WHERE id = 1");
+        
+        if (result.rows.length > 0) {
+            // If we find a logo, make it available to the EJS template
+            res.locals.companyLogoUrl = result.rows[0].logo_url;
+        }
+    } catch (err) {
+        // Log the error but don't block the request
+        console.error("Failed to load company settings for sidebar:", err);
+    } finally {
+        if (client) {
+            client.release();
+        }
+    }
+    // Continue to the next middleware (requireAdmin) or the route handler
+    next();
+};
+
+// Shared demo invoices data (used by /billing and /receipt)
+const invoicesData = [
+    { 
+        id: 'INV-00125', issueDate: '2025-10-05', dueDate: '2025-10-25', amount: '465.50', status: 'Due',
+        customerName: 'Customer User Demo',
+        address: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245',
+        accountNumber: '45891000000',
+        meterNumber: '10110071690',
+        billingUnits: 'm³',
+        meterDiameter: '19',
+        consumptionStartDate: '2024-09-05',
+        startRead: '17658.11',
+        consumptionEndDate: '2024-10-05',
+        endRead: '17862.62',
+        beforeVAT: '750.02',
+        vatPercentage: '15%',
+        vatValue: '112.50',
+        afterVAT: '862.52',
+        consumptionValue: '750.02',
+        serviceFee: '375.01',
+        meterTariff: '5.00',
+        totalAmount: '1299.53'
+    },
+    { 
+        id: 'INV-00124', issueDate: '2025-09-05', dueDate: '2025-09-25', amount: '450.00', status: 'Paid',
+        customerName: 'Customer User Demo',
+        address: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245',
+        accountNumber: '987-654-3210',
+        meterNumber: '65315101',
+        billingUnits: 'm³',
+        meterDiameter: '2 inches',
+        consumptionStartDate: '2025-08-03',
+        startRead: '11195',
+        consumptionEndDate: '2025-09-02',
+        endRead: '12345',
+        beforeVAT: '391.30',
+        vatPercentage: '15%',
+        vatValue: '58.70',
+        afterVAT: '450.00',
+        consumptionValue: '380.00',
+        serviceFee: '5.30',
+        meterTariff: '6.00',
+        totalAmount: '450.00'
+    },
+    { 
+        id: 'INV-00123', issueDate: '2025-08-05', dueDate: '2025-08-25', amount: '435.50', status: 'Paid',
+        customerName: 'Customer User Demo',
+        address: '1234 Olaya St, Al-Sulimaniah, Riyadh 12245',
+        accountNumber: '987-654-3210',
+        meterNumber: '65315102',
+        billingUnits: 'm³',
+        meterDiameter: '2 inches',
+        consumptionStartDate: '2025-07-03',
+        startRead: '10000',
+        consumptionEndDate: '2025-08-02',
+        endRead: '10500',
+        beforeVAT: '378.26',
+        vatPercentage: '15%',
+        vatValue: '56.79',
+        afterVAT: '435.05',
+        consumptionValue: '378.26',
+        serviceFee: '4.00',
+        meterTariff: '5.00',
+        totalAmount: '435.50'
+    }
+];
+
+
+// --- UPDATED ROUTES ---
+
+// UPDATED: Root route now redirects based on the user's role if a session exists
+app.get('/', (req, res) => {
+  if (req.session.user) {
+    if (req.session.user.role === 'admin') {
+      return res.redirect('/admin/home');
+    }
+    // Default to customer home for any other role
+    return res.redirect('/home');
+  }
+  // If no session, show the login page
+  res.render('Customer/login', { error: null });
+});
+
+
+// UPDATED: Login route now assigns roles and redirects
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+
+  // --- Check for Admin credentials ---
+  if (username === 'admin_demo' && password === 'Demo@123') {
+    req.session.user = {
+      name: 'Admin User Demo',
+      uid: 'demo_admin_01',
+      role: 'admin' // Assign 'admin' role
+    };
+    // Redirect to the dedicated admin home route
+    return res.redirect('/admin/home');
+  }
+
+  // --- Check for Customer credentials ---
+  if (username === 'customer_demo' && password === 'Demo@123') {
+    req.session.user = {
+      name: 'Customer User Demo',
+      uid: 1,
+      role: 'customer' // Assign 'customer' role
+    };
+    return res.redirect('/home');
+  }
+
+  // --- Fallback for failed login ---
+  res.render('Customer/login', { error: 'Invalid username or password. Please try again.' });
+});
+
+// Logout Route - works for both roles
+app.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.redirect('/');
+    }
+    res.clearCookie('connect.sid');
+    res.redirect('/');
+  });
+});
+
+// --- REVA LITEBILL ROUTES ---
+const liteBillRoutes = require('./backend.js');
+app.use('/', liteBillRoutes);
+
+//---------------------------------------------------------------------------------------//
+
+
+// --- NEW: Admin Routes ---
+
+// --- MODIFIED --- (Step 4: Apply middleware to ALL /admin routes)
+// This will run our new `loadCompanySettings` function AND `requireAdmin`
+// for every single route that starts with /admin.
+app.use('/admin', loadCompanySettings, requireAdmin);
+
+
+// All routes for the admin panel are now protected and have the logo URL.
+// We can remove `requireAdmin` from each route below because app.use() handles it.
+
+app.get('/admin/home', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/home_ad', {
+        user: req.session.user,
+        activePage: 'home'
+        // companyLogoUrl is automatically available from res.locals
+    });
+});
+
+
+app.get('/admin/customer_management', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/customer_management', {
+        user: req.session.user,
+        activePage: 'customer_management'
+    });
+});
+
+app.get('/admin/meter_management', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/meter_management', {
+        user: req.session.user,
+        activePage: 'meter_management'
+    });
+});
+
+app.get('/admin/billing_finance', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/billing_finance', {
+        user: req.session.user,
+        activePage: 'billing_finance'
+    });
+});
+
+app.get('/admin/analytics_reports', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/analytics_reports', {
+        user: req.session.user,
+        activePage: 'analytics_reports'
+    });
+});
+
+app.get('/admin/dashboards', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/dashboards', {
+        user: req.session.user,
+        activePage: 'dashboards'
+    });
+});
+
+app.get('/admin/settings', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/settings', {
+        user: req.session.user,
+        activePage: 'settings'
+    });
+});
+
+app.get('/admin/support_center', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/support_center', {
+        user: req.session.user,
+        activePage: 'support_center'
+    });
+});
+
+app.get('/admin/reva_lite_bill', (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/reva_lite_bill', {
+        user: req.session.user,
+        activePage: 'reva_lite_bill'
+    });
+});
+
+//---------------------------------------------------------------------------------------//
+
+   
+
+
+
+// --- PROTECTED Customer Routes ---
+// All customer routes now use `requireCustomer` for protection
+
+// Home Page Route - Odoo references removed
+// Home Page Route
+// Home Page Route
+app.get('/home', requireCustomer, (req, res) => {
+    // In a real app, you would fetch this summary data from your database
+    const kpiData = {
+        currentBalance: '125.50',
+        nextBillDue: '130.00',
+        lastPaidDate: 'December 15, 2025',
+        nextBillDate: 'January 20, 2026'
+    };
+
+    const usageGraphData = {
+        labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        values: [4200, 4500, 4300, 4600, 4400, 4750]
+    };
+
+    const recentTransactions = [
+        { date: '2025-12-15', description: 'Payment Received', amount: '-125.50' },
+        { date: '2025-11-20', description: 'Monthly Bill', amount: '130.00' },
+        { date: '2025-10-20', description: 'Monthly Bill', amount: '115.00' }
+    ];
+
+    // Prepare a meaningful initial live reading (simulate using masterMeterData if available)
+    const defaultMeter = masterMeterData && masterMeterData.length ? masterMeterData[0] : null;
+    const parseNumber = (s) => {
+        if (!s) return 0;
+        return Number(String(s).replace(/[^0-9.-]+/g, '')) || 0;
+    };
+    const baseReading = defaultMeter ? parseNumber(defaultMeter.lastReading) : 12345;
+    const initialReadingValue = baseReading + Math.floor(Math.random() * 10); // small increment
+    const formatNumber = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const initialReading = formatNumber(initialReadingValue);
+    const initialTimestamp = new Date().toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+
+    res.render('Customer/home', {
+        user: req.session.user,
+        activePage: 'home',
+        kpis: kpiData,
+        graphData: usageGraphData,
+        transactions: recentTransactions,
+        initialReading: initialReading,
+        initialUnit: defaultMeter && defaultMeter.lastReading && String(defaultMeter.lastReading).includes('gal') ? 'gal' : (defaultMeter && defaultMeter.billingUnits) || 'units',
+        initialTimestamp: initialTimestamp
+    });
+});
+
+// API endpoint to return a simulated live reading (for the Refresh button)
+app.get('/api/reading', requireCustomer, (req, res) => {
+    const defaultMeter = masterMeterData && masterMeterData.length ? masterMeterData[0] : null;
+    const parseNumber = (s) => {
+        if (!s) return 0;
+        return Number(String(s).replace(/[^0-9.-]+/g, '')) || 0;
+    };
+    const baseReading = defaultMeter ? parseNumber(defaultMeter.lastReading) : 12345;
+    // Simulate a realistic current reading and small random variance
+    const readingValue = baseReading + Math.floor(Math.random() * 25);
+    const formatNumber = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const readingStr = formatNumber(readingValue);
+    const timestamp = new Date();
+    const formatted = timestamp.toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+
+    res.json({ reading: readingStr, unit: defaultMeter && defaultMeter.lastReading && String(defaultMeter.lastReading).includes('gal') ? 'gal' : (defaultMeter && defaultMeter.billingUnits) || 'units', timestamp: timestamp.toISOString(), formatted });
+});
+
+
+// Billing Page Route
+app.get('/billing', requireCustomer, (req, res) => {
+    // Use shared invoicesData
+    const paymentHistoryData = [
+        { id: 'TXN-98765', date: '2025-09-20', description: `Payment for ${invoicesData[1].id}`, amount: `SAR ${invoicesData[1].totalAmount}`, method: 'Mada', receiptUrl: `/receipt/${invoicesData[1].id}` },
+        { id: 'TXN-98764', date: '2025-08-19', description: `Payment for ${invoicesData[2].id}`, amount: `SAR ${invoicesData[2].totalAmount}`, method: 'Visa', receiptUrl: `/receipt/${invoicesData[2].id}` }
+    ];
+
+    const planDetails = {
+        type: 'Postpaid Residential',
+        totalDue: '465.50',
+        rates: [
+            { tier: '1 - 15 m³', rate: '0.10' }, { tier: '16 - 30 m³', rate: '1.00' },
+            { tier: '31 - 45 m³', rate: '3.00' }, { tier: '46 - 60 m³', rate: '4.00' },
+            { tier: '> 60 m³', rate: '6.00' }
+        ]
+    };
+
+    res.render('Customer/billing', { 
+        user: req.session.user, 
+        activePage: 'billing',
+        invoices: invoicesData,
+        paymentHistory: paymentHistoryData,
+        plan: planDetails
+    });
+});
+
+// Reports Page Route
+// Reports Page Route
+// Reports Page Route
+app.get('/reports', requireCustomer, (req, res) => {
+    // In a real app, you would fetch this from the database
+    const metersList = masterMeterData.map(m => ({ id: m.id, location: m.location }));
+
+    // UPDATED: Set the downloadUrl to the receipt generation route /receipt/:invoiceId
+    const pastInvoices = [
+        { id: 'INV-00124', issueDate: '2025-09-05', amount: 'SAR 450.00', status: 'Paid', downloadUrl: `/receipt/INV-00124` },
+        { id: 'INV-00123', issueDate: '2025-08-05', amount: 'SAR 435.50', status: 'Paid', downloadUrl: `/receipt/INV-00123` },
+        { id: 'INV-00122', issueDate: '2025-07-05', amount: 'SAR 445.00', status: 'Paid', downloadUrl: `/receipt/INV-00122` },
+        { id: 'INV-00121', issueDate: '2025-06-05', amount: 'SAR 420.75', status: 'Paid', downloadUrl: `/receipt/INV-00121` }
+    ];
+
+    res.render('Customer/reports', { 
+        user: req.session.user, 
+        activePage: 'reports',
+        meters: metersList,
+        invoices: pastInvoices
+    });
+});
+
+// Settings Page Route
+app.get('/settings', requireCustomer, (req, res) => {
+    const paymentMethods = [
+        { id: 1, type: 'Visa', details: 'ending in 1234', expiry: '08/2026', isDefault: true },
+        { id: 2, type: 'Bank Account', details: 'ending in 5678', accountType: 'Checking Account', isDefault: false }
+    ];
+    res.render('Customer/settings', { user: req.session.user, activePage: 'settings', paymentMethods: paymentMethods });
+});
+
+// Meters Page Route
+app.get('/meters', requireCustomer, (req, res) => {
+    const { status } = req.query;
+    let filteredMeters = masterMeterData;
+    if (status) {
+        filteredMeters = masterMeterData.filter(meter => meter.status === status);
+    }
+    res.render('Customer/meters', {
+        user: req.session.user,
+        activePage: 'meters',
+        meters: filteredMeters,
+        activeFilter: status || 'All Meters'
+    });
+});
+
+// Usage Details Page Route
+app.get('/usage-details', requireCustomer, (req, res) => {
+    // In a real application, you would fetch this data from your database
+    const usageChartData = {
+        weekly: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            values: [1150, 1200, 1100, 1180]
+        },
+        monthly: {
+            labels: ['July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            values: [4500, 4200, 4600, 4400, 4700, 4800]
+        },
+        yearly: {
+            labels: ['2023', '2024', '2025'],
+            values: [55000, 59000, 61000]
+        }
+    };
+
+    res.render('Customer/usage-details', {
+        user: req.session.user,
+        activePage: 'usage-details',
+        chartData: usageChartData
+    });
+});
+
+// Alerts & Notifications Page Route
+app.get('/alerts', requireCustomer, (req, res) => {
+    // In a real app, this data would come from a database or a real-time events system
+    const alertsData = [
+        {
+            type: 'overdue',
+            title: 'Overdue Bill Alert',
+            timestamp: 'October 2, 2025',
+            message: 'Your bill for invoice INV-00124 (SAR 450.00) is now 7 days overdue. Please make a payment to avoid service disruption.',
+            link: '/billing',
+            linkText: 'Pay Now'
+        },
+        {
+            type: 'usage',
+            title: 'Abnormal Usage Detected',
+            timestamp: 'September 30, 2025',
+            message: 'We detected continuous water flow at meter SA-RYD-004 for over 6 hours, which may indicate a leak. We recommend checking your property for potential issues.',
+            link: '/meters',
+            linkText: 'View Meter Details'
+        },
+        {
+            type: 'service',
+            title: 'Planned Service Interruption',
+            timestamp: 'September 28, 2025',
+            message: 'Please be advised of a planned service interruption in the Olaya District for system maintenance on October 10, 2025, from 1:00 AM to 5:00 AM.',
+        }
+    ];
+
+    // Calculate KPIs
+    const kpiData = {
+        total: alertsData.length,
+        urgent: alertsData.filter(a => a.type === 'overdue' || a.type === 'usage').length,
+        info: alertsData.filter(a => a.type === 'service').length
+    };
+
+    res.render('Customer/alerts', {
+        user: req.session.user,
+        activePage: 'alerts',
+        alerts: alertsData,
+        kpis: kpiData // Pass KPI data to the page
+    });
+});
+
+// Support & Help Page Route
+app.get('/support', requireCustomer, (req, res) => {
+    // In a real app, you would fetch FAQs from a database or CMS
+    const faqData = [
+        {
+            question: 'How is my water bill calculated?',
+            answer: 'Your water bill is calculated based on a tiered system known as block rates. The price per cubic meter increases as your consumption moves into higher tiers. You can view the specific rates for your plan on the Billing & Payments page.'
+        },
+        {
+            question: 'What should I do if I suspect a water leak?',
+            answer: 'If you suspect a leak, first check your property for any visible signs like dripping faucets or wet spots. You can also monitor your meter for continuous activity. If you confirm a leak or see an abnormal usage alert, we recommend contacting a certified plumber immediately.'
+        },
+        {
+            question: 'How can I update my payment information?',
+            answer: 'You can manage your payment methods on the Settings page. From there, you can add a new credit/debit card or bank account, set a default payment method, and remove old ones.'
+        }
+    ];
+
+    res.render('Customer/support', {
+        user: req.session.user,
+        activePage: 'support',
+        faqs: faqData
+    });
+});
+
+// --- Data and Server Setup ---
+
+const masterMeterData = [
+    {
+        id: 'SA-RYD-001',
+        meterNumber: '65315101',
+        billNumber: '294511223344',
+        releaseDate: '2025-09-05',
+        deadlineDate: '2025-09-25',
+        periodStartDate: '2025-08-03',
+        periodEndDate: '2025-09-02',
+        periodStartReading: 11195,
+        periodEndReading: 12345,
+        status: 'Active',
+        lastReading: '12,345 gal',
+        totalReadings: '150,500 gal',
+        location: 'Olaya District, Riyadh',
+        buildingType: 'Commercial Building',
+        amount: 'SAR 450.00',
+        previousBillAmount: 0,
+        lat: 24.7011,
+        lng: 46.6835,
+        paymentHistory: [
+            { date: '2025-09-20', description: 'Monthly Bill', amount: '- SAR 450.00', status: 'Paid', type: 'Debit' },
+            { date: '2025-08-20', description: 'Monthly Bill', amount: '- SAR 435.50', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    {
+        id: 'SA-RYD-002',
+        meterNumber: '65315102',
+        billNumber: '294522334455',
+        releaseDate: '2025-09-01',
+        deadlineDate: '2025-09-20',
+        periodStartDate: '2025-07-29',
+        periodEndDate: '2025-08-28',
+        periodStartReading: null,
+        periodEndReading: null,
+        status: 'Inactive',
+        lastReading: 'N/A',
+        totalReadings: '89,000 gal',
+        location: 'Al Malaz, Riyadh',
+        buildingType: 'Residential Building',
+        amount: 'SAR 210.50',
+        previousBillAmount: 0,
+        lat: 24.6633,
+        lng: 46.7381,
+        paymentHistory: [
+            { date: '2025-09-15', description: 'Final Bill', amount: '- SAR 210.50', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    {
+        id: 'SA-RYD-003',
+        meterNumber: '65315103',
+        billNumber: '294533445566',
+        releaseDate: '2025-09-10',
+        deadlineDate: '2025-10-10',
+        periodStartDate: '2025-06-09',
+        periodEndDate: '2025-09-08',
+        periodStartReading: 60890,
+        periodEndReading: 67890,
+        status: 'Active',
+        lastReading: '67,890 gal',
+        totalReadings: '750,000 gal',
+        location: 'Diplomatic Quarter, Riyadh',
+        buildingType: 'Government Building',
+        amount: 'SAR 2,150.00',
+        previousBillAmount: 0,
+        lat: 24.6853,
+        lng: 46.6325,
+        paymentHistory: [
+            { date: '2025-09-25', description: 'Quarterly Bill', amount: '- SAR 2,150.00', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    {
+        id: 'SA-RYD-004',
+        meterNumber: '65315104',
+        billNumber: '294544556677',
+        releaseDate: '2025-09-02',
+        deadlineDate: '2025-09-22',
+        periodStartDate: '2025-07-31',
+        periodEndDate: '2025-08-30',
+        periodStartReading: 48821,
+        periodEndReading: 54321,
+        status: 'Needs Attention',
+        lastReading: '54,321 gal',
+        totalReadings: '432,100 gal',
+        location: 'King Abdullah Financial District, Riyadh',
+        buildingType: 'Commercial Building',
+        amount: 'SAR 1,812.20',
+        previousBillAmount: 0,
+        lat: 24.7631,
+        lng: 46.6433,
+        paymentHistory: [
+             { date: '2025-09-18', description: 'Payment Attempt', amount: '- SAR 1,812.20', status: 'Failed', type: 'Debit' },
+             { date: '2025-08-18', description: 'Monthly Bill', amount: '- SAR 1,750.00', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    {
+        id: 'SA-RYD-005',
+        meterNumber: '65315105',
+        billNumber: '294555667788',
+        releaseDate: '2025-09-07',
+        deadlineDate: '2025-09-27',
+        periodStartDate: '2025-08-06',
+        periodEndDate: '2025-09-05',
+        periodStartReading: 88765,
+        periodEndReading: 98765,
+        status: 'Active',
+        lastReading: '98,765 gal',
+        totalReadings: '995,400 gal',
+        location: 'Al-Naseem, Riyadh',
+        buildingType: 'Residential Building',
+        amount: 'SAR 3,100.75',
+        previousBillAmount: 0,
+        lat: 24.7241,
+        lng: 46.8229,
+        paymentHistory: [
+            { date: '2025-09-22', description: 'Monthly Bill', amount: '- SAR 3,100.75', status: 'Paid', type: 'Debit' }
+        ]
+    },
+    {
+        id: 'SA-RYD-006',
+        meterNumber: '65315106',
+        billNumber: '294566778899',
+        releaseDate: '2025-09-12',
+        deadlineDate: '2025-10-02',
+        periodStartDate: '2025-08-11',
+        periodEndDate: '2025-09-10',
+        periodStartReading: 3567,
+        periodEndReading: 4567,
+        status: 'Active',
+        lastReading: '4,567 gal',
+        totalReadings: '210,800 gal',
+        location: 'Al-Sulimaniah, Riyadh',
+        buildingType: 'Residential Building',
+        amount: 'SAR 385.50',
+        previousBillAmount: 0,
+        lat: 24.7050,
+        lng: 46.7000,
+        paymentHistory: [
+            { date: '2025-09-28', description: 'Monthly Bill', amount: '- SAR 385.50', status: 'Paid', type: 'Debit' },
+            { date: '2025-08-28', description: 'Monthly Bill', amount: '- SAR 370.00', status: 'Paid', type: 'Debit' }
+        ]
+    }
+];
+
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+
+io.on('connection', (socket) => {
+  console.log('A user connected with ID:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('User disconnected');
+  });
+});
+
+server.listen(port, () => {
+  console.log(`✅ Server is running on http://localhost:${port}`);
+});
+
+// Remove the imports: const PDFDocument = require('pdfkit'); and const fs = require('fs');
+// ...
+
+// Route to generate and download invoice receipt PDF
+app.get('/receipt/:invoiceId', async (req, res) => {
+    const invoiceId = req.params.invoiceId;
+    
+    // 1. Fetch Invoice Data (Source of the 'invoice' variable)
+    const invoice = invoicesData.find(inv => inv.id === invoiceId);
+    
+    if (!invoice || invoice.status !== 'Paid') {
+        return res.status(404).send('Paid Invoice details not found.');
+    }
+    
+    // 2. Calculate EJS Variables
+    const waterBefore = Number(invoice.consumptionValue || 0);
+    const sewerBefore = Number(invoice.serviceFee || 0);
+    const tariffBefore = Number(invoice.meterTariff || 0);
+    const consumption = (Number(invoice.endRead) - Number(invoice.startRead)).toFixed(2);
+    
+    const totalBefore = (waterBefore + sewerBefore + tariffBefore).toFixed(2);
+    const totalVAT = (Number(waterBefore * 0.15) + Number(sewerBefore * 0.15) + Number(tariffBefore * 0.15)).toFixed(2);
+    const totalAfter = Number(invoice.totalAmount).toFixed(2); 
+
+    try {
+        // 3. Render EJS to HTML String - POINTING TO CORRECT FILE: receipt.ejs
+        const filePath = path.join(__dirname, 'views', 'Customer', 'partials','receipt.ejs'); // <-- CONFIRMED PATH
+        
+        const htmlContent = await ejs.renderFile(filePath, { 
+            invoice: invoice, // <-- This defines the 'invoice' variable for EJS
+            consumption: consumption,
+            totalBefore: totalBefore,
+            totalVAT: totalVAT,
+            totalAfter: totalAfter
+        });
+
+        // NEW (FIXED) CODE:
+        const browser = await puppeteer.launch({ headless: true });
+        const page = await browser.newPage();
+        
+        // Load the HTML content
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+        
+        // 5. Generate PDF
+        const pdfBuffer = await page.pdf({ 
+            format: 'A4', 
+            printBackground: true, 
+            margin: {
+                top: '0.2in',
+                right: '0.2in',
+                bottom: '0.2in',
+                left: '0.2in'
+            }
+        });
+
+        await browser.close();
+
+        // 6. Send PDF as a Download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Water_Bill_Receipt_${invoiceId}.pdf`);
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        // Log the error and display the friendly message
+        console.error('Puppeteer/PDF Generation Failed:', error.message);
+        res.status(500).send('Error generating downloadable PDF.');
+    }
+});
+
+
+app.get('/reports/generate', requireCustomer, async (req, res) => {
+    const { report_type, startDate, endDate, meterId, format } = req.query;
+
+    if (!startDate || !endDate) {
+        return res.status(400).send('Start Date and End Date are required.');
+    }
+    
+    // Helper function to format date to YYYY-MM-DD reliably, avoiding UTC/ISO issues
+    const formatDate = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    let reportData = [];
+    let templateData = { 
+        user: req.session.user, 
+        startDate: startDate, 
+        endDate: endDate 
+    };
+    let filename;
+
+    // 1. DATA AGGREGATION & REPORT TYPE VALIDATION
+    if (report_type === 'usage') {
+        // --- USAGE HISTORY DATA LOGIC ---
+        filename = `Usage_Report_${startDate}_to_${endDate}.${format}`;
+        
+        let selectedMeters = meterId !== 'all' ? masterMeterData.filter(m => m.id === meterId) : masterMeterData;
+        let totalConsumption = 0;
+        
+        // CRITICAL FIX: Initialize dates using YYYY, M, D to guarantee local time (no T00:00:00 issues)
+        const partsStart = startDate.split('-');
+        let start = new Date(partsStart[0], partsStart[1] - 1, partsStart[2]); 
+        
+        const partsEnd = endDate.split('-');
+        let end = new Date(partsEnd[0], partsEnd[1] - 1, partsEnd[2]);
+        
+        // Loop robustly from start date up to and including the end date
+        while (start <= end) {
+            
+            const formattedDate = formatDate(start); 
+            
+            selectedMeters.forEach(meter => {
+                const dailyUsage = Math.floor(Math.random() * (400 - 200 + 1)) + 200;
+                
+                reportData.push({
+                    date: formattedDate, 
+                    meterId: meter.id,
+                    location: meter.location,
+                    dailyUsage: dailyUsage.toFixed(0),
+                });
+                totalConsumption += dailyUsage;
+            });
+            
+            // Move to the next day
+            start.setDate(start.getDate() + 1);
+        }
+
+        templateData.meterId = meterId;
+        templateData.reportData = reportData;
+        templateData.totalConsumption = totalConsumption.toFixed(0);
+
+    } else if (report_type === 'statement') {
+        // --- ACCOUNT STATEMENT DATA LOGIC ---
+        filename = `Account_Statement_${startDate}_to_${endDate}.${format}`;
+        
+        // Mock transaction data
+        reportData = [
+            { date: '2025-10-01', description: 'Starting Balance', debit: '0.00', credit: '0.00', balance: '250.00' },
+            { date: '2025-10-05', description: 'Invoice INV-00126', debit: '465.50', credit: '0.00', balance: '-215.50' },
+            { date: '2025-10-15', description: 'Payment Received', debit: '0.00', credit: '465.50', balance: '250.00' }
+        ].filter(row => {
+            // Filter mock data using YYYY, M, D initialization for consistency
+            const partsRow = row.date.split('-');
+            const rowDate = new Date(partsRow[0], partsRow[1] - 1, partsRow[2]);
+
+            const partsStart = startDate.split('-');
+            const startLimit = new Date(partsStart[0], partsStart[1] - 1, partsStart[2]);
+
+            const partsEnd = endDate.split('-');
+            const endLimit = new Date(partsEnd[0], partsEnd[1] - 1, partsEnd[2]);
+
+            return rowDate >= startLimit && rowDate <= endLimit;
+        });
+
+    } else {
+        // Fallback for an invalid report type value
+        return res.status(400).send('Invalid report type requested.');
+    }
+
+    // 2. FORMAT GENERATION
+    if (format === 'csv') {
+        // --- CSV GENERATION LOGIC ---
+        
+        let csvContent = '';
+        let headers;
+
+        if (report_type === 'usage') {
+            headers = ['Date', 'Meter ID', 'Location', 'Daily Usage (gal)'];
+            // Double-check the structure here to ensure date property is accessed
+            csvContent = reportData.map(row => 
+                `${row.date},${row.meterId},"${row.location}",${row.dailyUsage}`
+            ).join('\n');
+            
+        } else if (report_type === 'statement') {
+            headers = ['Date', 'Description', 'Debit (SAR)', 'Credit (SAR)', 'Running Balance (SAR)'];
+            csvContent = reportData.map(row => 
+                `${row.date},"${row.description}",${row.debit},${row.credit},${row.balance}`
+            ).join('\n');
+        }
+        
+        // Prepend headers and send the file
+        const finalCsv = headers.join(',') + '\n' + csvContent;
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        return res.send(finalCsv);
+
+    } else if (format === 'pdf') {
+        // --- PDF GENERATION LOGIC (Puppeteer/EJS) ---
+        
+        let templatePath;
+        if (report_type === 'usage') {
+            templatePath = path.join(__dirname, 'views', 'Customer', 'partials', 'usage-report.ejs');
+        } else { // statement
+            templatePath = path.join(__dirname, 'views', 'Customer', 'partials', 'account-statement.ejs');
+        }
+        
+        try {
+            const htmlContent = await ejs.renderFile(templatePath, templateData);
+
+            const browser = await puppeteer.launch({ headless: true });
+            const page = await browser.newPage();
+            
+            await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+            
+            const pdfBuffer = await page.pdf({ 
+                format: 'A4', 
+                printBackground: true, 
+                margin: {
+                    top: '0.2in', right: '0.2in', bottom: '0.2in', left: '0.2in'
+                }
+            });
+
+            await browser.close();
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            return res.send(pdfBuffer);
+            
+        } catch (error) {
+            console.error(`${report_type} Report PDF Generation Failed:`, error.message);
+            return res.status(500).send(`Error generating ${report_type === 'usage' ? 'Usage Report' : 'Account Statement'} PDF.`);
+        }
+
+    } else {
+        // Fallback for an invalid format value
+        return res.status(400).send('Invalid file format requested.');
+    }
+});

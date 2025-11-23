@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control Center | Reva Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style> body { font-family: 'Inter', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 dark:bg-gray-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+  <div class="flex">
+    <%- include('partials_ad/sidebar_ad', { user, activePage }) %>
+    <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
+      <header class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-3xl font-bold text-slate-900 dark:text-white">REVA ZONE Control Center</h1>
+          <p class="text-slate-500 dark:text-slate-400 mt-1">Manage companies, licenses and platform instances.</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="/logout" class="text-sm text-slate-600 dark:text-slate-300 hover:underline">Logout</a>
+        </div>
+      </header>
+
+      <div class="mb-6 border-b border-slate-200 dark:border-gray-700">
+        <nav class="flex gap-6" aria-label="Tabs">
+          <button id="tab-global" class="py-2 border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-tab="global">Global Monitoring</button>
+          <button id="tab-list" class="py-2 border-b-2 border-blue-600 text-blue-700 dark:text-white" data-tab="list">Company List</button>
+        </nav>
+      </div>
+
+      <section id="panel-global" class="hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-md shadow p-4">
+          <div id="global-map" class="w-full h-[540px] rounded-md border border-slate-200 dark:border-gray-700"></div>
+        </div>
+      </section>
+
+      <section id="panel-list">
+        <div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-md shadow">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+              <tr>
+                <th class="px-4 py-3 text-left">Company Name</th>
+                <th class="px-4 py-3 text-left">Current Plan</th>
+                <th class="px-4 py-3 text-left">Max Customers</th>
+                <th class="px-4 py-3 text-left">Platform Version</th>
+                <th class="px-4 py-3 text-left">Status</th>
+                <th class="px-4 py-3 text-left">Last Login</th>
+                <th class="px-4 py-3 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+              <% (companies || []).forEach((row) => { %>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <td class="px-4 py-3"><%= row.company_name %></td>
+                  <td class="px-4 py-3"><%= row.plan_name || '-' %></td>
+                  <td class="px-4 py-3"><%= row.max_customers != null ? row.max_customers : '-' %></td>
+                  <td class="px-4 py-3"><%= row.platform_version || '-' %></td>
+                  <td class="px-4 py-3"><%= row.status %></td>
+                  <td class="px-4 py-3"><%= row.last_activity_at ? new Date(row.last_activity_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }) : '-' %></td>
+                  <td class="px-4 py-3">
+                    <a class="text-blue-600 hover:underline" href="/admin/control-center/manage/<%= row.id %>">View/Manage</a>
+                  </td>
+                </tr>
+              <% }) %>
+              <% if (!companies || companies.length === 0) { %>
+                <tr>
+                  <td colspan="7" class="px-4 py-6 text-center text-slate-500">No companies found.</td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<%- include('partials_ad/scripts_ad', { user }) %>
+
+<script>
+  // Simple tab switcher
+  (function(){
+    const tabGlobal = document.getElementById('tab-global');
+    const tabList = document.getElementById('tab-list');
+    const panelGlobal = document.getElementById('panel-global');
+    const panelList = document.getElementById('panel-list');
+    let globalMap = null;
+    let mapInitialized = false;
+
+    async function initGlobalMap(){
+      if (mapInitialized || !window.L) return;
+      const el = document.getElementById('global-map');
+      if (!el) return;
+      try {
+        const resp = await fetch('/api/v1/all-company-locations');
+        const data = await resp.json();
+        const points = Array.isArray(data) ? data.filter(d => d.lat != null && d.lng != null) : [];
+        const defaultCenter = [24.7136, 46.6753]; // Riyadh
+        globalMap = L.map(el).setView(points.length ? [Number(points[0].lat), Number(points[0].lng)] : defaultCenter, points.length > 1 ? 8 : 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(globalMap);
+        const bounds = [];
+        points.forEach(p => {
+          const lat = Number(p.lat), lng = Number(p.lng);
+          const plan = p.plan_name || '—';
+          const ts = p.last_login ? new Date(p.last_login).toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }) : '—';
+          const marker = L.marker([lat, lng]).addTo(globalMap);
+          marker.bindPopup(`<div><strong>${p.company_name}</strong><br/>Plan: ${plan}<br/>Last login: ${ts}</div>`);
+          bounds.push([lat, lng]);
+        });
+        if (bounds.length > 1) globalMap.fitBounds(bounds);
+        mapInitialized = true;
+        setTimeout(() => globalMap && globalMap.invalidateSize(), 50);
+      } catch (e) {
+        el.innerHTML = '<div class="text-center text-red-600 py-8">Failed to load global locations.</div>';
+      }
+    }
+
+    function activate(which){
+      if (which === 'global'){
+        panelGlobal.classList.remove('hidden');
+        panelList.classList.add('hidden');
+        tabGlobal.classList.add('border-blue-600','text-blue-700');
+        tabList.classList.remove('border-blue-600','text-blue-700');
+        initGlobalMap();
+        if (globalMap) {
+          setTimeout(() => globalMap && globalMap.invalidateSize(), 50);
+        }
+      } else {
+        panelList.classList.remove('hidden');
+        panelGlobal.classList.add('hidden');
+        tabList.classList.add('border-blue-600','text-blue-700');
+        tabGlobal.classList.remove('border-blue-600','text-blue-700');
+      }
+    }
+    tabGlobal && tabGlobal.addEventListener('click', () => activate('global'));
+    tabList && tabList.addEventListener('click', () => activate('list'));
+    // Default to list view
+    activate('list');
+  })();
+</script>

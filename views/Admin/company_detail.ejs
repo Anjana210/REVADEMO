@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Company Detail | Control Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+  <style> body { font-family: 'Inter', sans-serif; } </style>
+</head>
+<body class="bg-slate-100 dark:bg-gray-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+  <div class="flex">
+    <%- include('partials_ad/sidebar_ad', { user, activePage }) %>
+
+    <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
+      <header class="flex justify-between items-center mb-6">
+        <div>
+          <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Company: <%= company.company_name %></h1>
+          <p class="text-slate-500 dark:text-slate-400 mt-1">Manage company profile, license, and account status.</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="/admin/control-center" class="text-sm text-blue-600 hover:underline">Back to Control Center</a>
+          <a href="/logout" class="text-sm text-slate-600 dark:text-slate-300 hover:underline">Logout</a>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div class="p-6 border-b border-slate-200 dark:border-gray-700">
+            <h2 class="text-xl font-semibold">Company Details</h2>
+          </div>
+          <form method="POST" action="/admin/control-center/company/<%= company.id %>">
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">Company Name</label>
+                <input name="company_name" value="<%- company.company_name || '' %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" required />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Platform ID</label>
+                <input name="reva_platform_id" value="<%- company.reva_platform_id || '' %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-medium mb-1">Address</label>
+                <textarea name="address" rows="2" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700"><%- company.address || '' %></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Contact Email</label>
+                <input type="email" name="contact_email" value="<%- company.contact_email || '' %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Phone</label>
+                <input name="phone" value="<%- company.phone || '' %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Status</label>
+                <select name="status" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                  <option value="Active" <%= company.status === 'Active' ? 'selected' : '' %>>Active</option>
+                  <option value="Suspended" <%= company.status === 'Suspended' ? 'selected' : '' %>>Suspended</option>
+                  <option value="Trial" <%= company.status === 'Trial' ? 'selected' : '' %>>Trial</option>
+                  <option value="Cancelled" <%= company.status === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Last Activity</label>
+                <input value="<%= company.last_activity_at ? new Date(company.last_activity_at).toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }) : '-' %>" disabled class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700" />
+              </div>
+            </div>
+            <div class="p-6 border-t border-slate-200 dark:border-gray-700">
+              <button class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700">Save Company</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div class="p-6 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-xl font-semibold">License</h2>
+            <span class="text-sm <%= (license && license.is_paid) ? 'text-green-600' : 'text-red-600' %>"><%= (license && license.is_paid) ? 'Paid' : 'Unpaid' %></span>
+          </div>
+          <form method="POST" action="/admin/control-center/company/<%= company.id %>/license" id="license-form">
+            <div class="p-6 grid grid-cols-1 gap-4">
+              <% if (license) { %>
+              <div>
+                <label class="block text-sm font-medium mb-1">License Code</label>
+                <input name="license_code" id="license_code" maxlength="12" value="<%- license.license_code %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" required />
+              </div>
+              <% } %>
+              <div>
+                <label class="block text-sm font-medium mb-1">ODOO Reference String</label>
+                <input name="udo_reference_string" value="<%- license ? (license.udo_reference_string || '') : '' %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Subscription Plan</label>
+                <select name="plan_id" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                  <option value="">Select plan</option>
+                  <% plans.forEach(p => { %>
+                    <option value="<%= p.id %>" <%= (license && license.plan_id === p.id) ? 'selected' : '' %>><%= p.plan_name %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">Start Date</label>
+                  <input type="date" name="start_date" value="<%- license ? (license.start_date ? license.start_date.toISOString ? license.start_date.toISOString().slice(0,10) : (new Date(license.start_date)).toISOString().slice(0,10) : '') : '' %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" required />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">Expiry Date</label>
+                  <input type="date" name="expiry_date" value="<%- license ? (license.expiry_date ? license.expiry_date.toISOString ? license.expiry_date.toISOString().slice(0,10) : (new Date(license.expiry_date)).toISOString().slice(0,10) : '') : '' %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" required />
+                </div>
+              </div>
+              <label class="inline-flex items-center gap-2">
+                <input type="checkbox" name="is_paid" value="true" <%= (license && license.is_paid) ? 'checked' : '' %> class="rounded text-green-600 focus:ring-green-500" />
+                <span class="text-sm">Is Paid</span>
+              </label>
+
+              <% if (license) { %>
+              <div class="mt-4">
+                <label class="block text-sm font-medium mb-2">QR Code</label>
+                <div id="qrcode" class="bg-white p-3 rounded border border-slate-200 inline-block"></div>
+                <p class="text-xs text-slate-500 mt-1">Generated from the License Code.</p>
+              </div>
+              <% } %>
+            </div>
+            <div class="p-6 border-t border-slate-200 dark:border-gray-700">
+              <button class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-700">Save License</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow lg:col-span-3">
+          <div class="p-6 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Account Controls</h2>
+            <span class="text-sm text-slate-500">Current Status: <strong><%= company.status %></strong></span>
+          </div>
+          <% if (company.status === 'Suspended') { %>
+            <form method="POST" action="/admin/control-center/company/<%= company.id %>/activate">
+              <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium mb-1">Suspension Message</label>
+                  <input value="<%- company.suspension_message || '' %>" disabled class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700" />
+                </div>
+                <div>
+                  <button class="w-full bg-green-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-green-700" type="submit">
+                    Activate Account
+                  </button>
+                </div>
+              </div>
+            </form>
+          <% } else { %>
+            <form method="POST" action="/admin/control-center/company/<%= company.id %>/suspend">
+              <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="md:col-span-2">
+                  <label class="block text-sm font-medium mb-1">Suspension Message (optional)</label>
+                  <input name="message" value="<%- company.suspension_message || '' %>" class="w-full rounded-md border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700" placeholder="Message shown to customer upon login" />
+                </div>
+                <div>
+                  <button class="w-full bg-red-600 text-white font-semibold px-4 py-2 rounded-md hover:bg-red-700" type="submit">
+                    Suspend Account
+                  </button>
+                </div>
+              </div>
+            </form>
+          <% } %>
+        </section>
+
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow lg:col-span-3">
+          <div class="p-6 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-xl font-semibold">System Instance</h2>
+            <span class="text-sm text-slate-500">Last Check: <%= instance && instance.last_health_check ? new Date(instance.last_health_check).toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }) : '-' %></span>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <div class="text-xs text-slate-500">Platform Version</div>
+              <div class="font-semibold"><%= instance ? (instance.platform_version || '-') : '-' %></div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-500">DB Status</div>
+              <% const dbColor = instance && instance.db_status === 'Healthy' ? 'text-green-600' : (instance && instance.db_status === 'Warning' ? 'text-yellow-600' : (instance && instance.db_status === 'Critical' ? 'text-red-600' : 'text-slate-700')); %>
+              <div class="font-semibold <%= dbColor %>"><%= instance ? (instance.db_status || '-') : '-' %></div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-500">Uptime (hrs)</div>
+              <div class="font-semibold"><%= instance ? (instance.server_uptime_hours || 0) : 0 %></div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-500">Transfer (GB)</div>
+              <% const used = instance ? Number(instance.current_transfer_gb || 0) : 0; const limit = planLimitGb || 0; const ratio = limit ? (used/limit) : 0; const pct = Math.max(0, Math.min(100, Math.round(ratio*100))); const barColor = pct <= 50 ? 'bg-green-600' : (pct <= 80 ? 'bg-yellow-500' : 'bg-red-600'); %>
+              <div class="font-semibold <%= pct > 80 ? 'text-red-600' : '' %>">
+                <%= used %> / <%= limit || '—' %> GB (<%= pct %>%)
+              </div>
+              <div class="mt-1 h-2 w-full bg-slate-200 dark:bg-gray-700 rounded">
+                <div class="h-2 rounded <%= barColor %>" style="width: <%= pct %>%"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white dark:bg-gray-800 rounded-lg shadow lg:col-span-3">
+          <div class="p-6 border-b border-slate-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-xl font-semibold">Live User Locations</h2>
+            <span class="text-sm text-slate-500">Latest login markers</span>
+          </div>
+          <div class="p-6">
+            <div id="map" class="w-full h-80 rounded-md border border-slate-200 dark:border-gray-700"></div>
+            <div class="mt-4">
+              <div class="text-sm font-semibold mb-2">Recent Logins</div>
+              <div id="recent-logins" class="text-sm text-slate-700 dark:text-slate-300"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    (function(){
+      const input = document.getElementById('license_code');
+      const el = document.getElementById('qrcode');
+      let qr;
+      function renderQR(v){
+        if (!el) return;
+        el.innerHTML = '';
+        if (!v || v.length !== 12) { return; }
+        qr = new QRCode(el, { text: v, width: 128, height: 128 });
+      }
+      if (input) {
+        renderQR(input.value || '');
+        input.addEventListener('input', (e)=>{
+          const v = (e.target.value||'').trim();
+          renderQR(v);
+        });
+      }
+    })();
+    document.addEventListener('DOMContentLoaded', async () => {
+      const mapEl = document.getElementById('map');
+      if (!mapEl || !window.L) return;
+      try {
+        const resp = await fetch('/api/v1/user-locations/<%= company.id %>');
+        const data = await resp.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          mapEl.innerHTML = '<div class="text-center text-slate-500 py-8">No recent login locations.</div>';
+          return;
+        }
+        const first = data[0];
+        const map = L.map(mapEl).setView([Number(first.lat), Number(first.lng)], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+
+        const blueIcon = L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41]
+        });
+        const greenIcon = L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41]
+        });
+
+        const bounds = [];
+        data.forEach(item => {
+          let lat = Number(item.lat), lng = Number(item.lng);
+          const ts = new Date(item.last_login).toLocaleString('en-US', { timeZone: 'Asia/Riyadh' });
+          const uname = item.username ? String(item.username) : '';
+          const role = (item.user_role || '').toLowerCase();
+
+          // Slight offset so markers with identical coordinates (e.g. master & operator logging from same place) do not overlap completely
+          if (role === 'master') {
+            lat += 0.0002; // ~20m north
+          } else if (role === 'operator') {
+            lat -= 0.0002; // ~20m south
+          }
+
+          const icon = role === 'operator' ? greenIcon : blueIcon; // operator: green, master/default: blue
+          const marker = L.marker([lat, lng], { icon }).addTo(map);
+
+          marker.bindPopup(`<div><strong>${item.user_role}${uname ? ' - ' + uname : ''}</strong><br/>Last login: ${ts}</div>`);
+          bounds.push([lat, lng]);
+        });
+        if (bounds.length > 1) map.fitBounds(bounds);
+
+        const container = document.getElementById('recent-logins');
+        if (container) {
+          const byRole = {};
+          data.forEach(d => {
+            const r = (d.user_role || '').toLowerCase();
+            if (!byRole[r] || new Date(d.last_login) > new Date(byRole[r].last_login)) byRole[r] = d;
+          });
+          const rows = [];
+          if (byRole['master']) rows.push(`<div>Master${byRole['master'].username ? ' ('+byRole['master'].username+')' : ''}: <span class=\"font-semibold\">${new Date(byRole['master'].last_login).toLocaleString('en-US',{ timeZone: 'Asia/Riyadh' })}</span></div>`);
+          if (byRole['operator']) rows.push(`<div>Operator${byRole['operator'].username ? ' ('+byRole['operator'].username+')' : ''}: <span class=\"font-semibold\">${new Date(byRole['operator'].last_login).toLocaleString('en-US',{ timeZone: 'Asia/Riyadh' })}</span></div>`);
+          container.innerHTML = rows.length ? rows.join('') : '<div class="text-slate-500">No recent logins found.</div>';
+        }
+      } catch (e) {
+        mapEl.innerHTML = '<div class="text-center text-red-600 py-8">Failed to load locations.</div>';
+      }
+    });
+  </script>
+  <%- include('partials_ad/scripts_ad', { user }) %>
+</body>
+</html>

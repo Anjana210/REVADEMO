@@ -1,106 +1,152 @@
-<nav id="sidebar" class="w-72.5 h-screen bg-white dark:bg-slate-800 p-6 flex flex-col flex-shrink-0 transition-transform md:translate-x-0 -translate-x-full fixed md:relative z-20">
-    <div class="text-center mb-10">
-        <h2 class="text-3xl font-bold">
-            <div>
-                <span class="text-[#C0392B]">REVA</span>
-            </div>
-            <div>
-                <span class="text-slate-400 font-light">ZONE</span>
-            </div>
-            <div>
-                <span class="text-[#C0392B] text-base">Demo Version</span>
-            </div>
-        </h2>
-    </div>
+<aside class="flex flex-col w-72 h-screen px-4 py-8 overflow-y-auto bg-white dark:bg-gray-800 rtl:border-r-0 rtl:border-l">
+    
+    <a href="/admin/home" class="flex items-center justify-center px-6 min-h-[100px]">
+        
+        <% if (locals.companyLogoUrl) { %>
+            <img id="sidebar-logo-image" 
+                 src="<%= locals.companyLogoUrl %>" 
+                 alt="Company Logo" 
+                 class="h-24 w-full mx-auto object-contain">
 
-    <ul class="space-y-2">
-        <li>
-            <a href="/admin/home" class="flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold
-                <%= activePage === 'home' 
-                    ? 'bg-[#C0392B] text-white' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100' 
-                %>
-            ">
-                <i class="fa-solid fa-fw fa-house"></i>
-                <span>Home</span>
+        <% } else { %>
+            <h2 id="sidebar-logo-container" class="text-3xl font-bold">
+                <div id="sidebar-logo-text">
+                    <div>
+                         <span class="text-[#C0392B]">REVA</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 dark:text-slate-400 font-light">ZONE</span>
+                    </div>
+                    <div>
+                        <span class="text-[#C0392B] text-base">Demo Version</span>
+                    </div>
+                </div>
+            </h2>
+        <% } %>
+
+ 
+    </a>
+
+    <div class="flex flex-col justify-between flex-1 mt-6">
+        <nav>
+            <% if (user && user.role === 'superadmin') { %>
+            <a href="/admin/control-center" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'control_center') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-shield-alt w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Control Center</span>
             </a>
-        </li>
-        <li>
-            <a href="/admin/dashboards" class="flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold
-                <%= activePage === 'dashboards' 
-                    ? 'bg-[#C0392B] text-white' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100' 
-                %>
-            ">
-                <i class="fa-solid fa-fw fa-table-columns"></i>
-                <span>Dashboards</span>
+            <% } %>
+            <a href="/admin/home" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'home') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-home w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Home</span>
             </a>
-        </li>
-        <li>
-            <a href="/admin/customer_management" class="flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold
-                <%= activePage === 'customer_management' 
-                    ? 'bg-[#C0392B] text-white' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100' 
-                %>
-            ">
-                <i class="fa-solid fa-fw fa-users"></i>
-                <span>Customer Management</span>
+
+     
+            <a href="/admin/dashboards" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'dashboards') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-tachometer-alt w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Dashboards</span>
             </a>
-        </li>
-        <li>
-            <a href="/admin/meter_management" class="flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold
-                <%= activePage === 'meter_management' 
-                    ? 'bg-[#C0392B] text-white' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100' 
-                %>
-            ">
-                <i class="fa-solid fa-fw fa-tachometer-alt"></i>
-                <span>Meter Management</span>
+
+            
+            <a href="/admin/reva_lite_bill" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'reva_lite_bill') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-file-invoice-dollar w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Manual Bill Processor</span>
             </a>
-        </li>
-        <li>
-            <a href="/admin/billing_finance" class="flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold
-                <%= activePage === 'billing_finance' 
-                    ? 'bg-[#C0392B] text-white' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100' 
-                %>
-            ">
-                <i class="fa-solid fa-fw fa-file-invoice-dollar"></i>
-                <span>Billing & Payments</span>
+
+           
+            <a href="/admin/customer_management" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'customer_management') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-users w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Customer Management</span>
             </a>
-        </li>
-        <li>
-            <a href="/admin/analytics_reports" class="flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold
-                <%= activePage === 'analytics_reports' 
-                    ? 'bg-[#C0392B] text-white' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100' 
-                %>
-            ">
-                <i class="fa-solid fa-fw fa-chart-pie"></i>
-                <span>Analytics & Reports</span>
+
+           
+            <a href="/admin/meter_management" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'meter_management') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-gauge-high w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Meter Management</span>
             </a>
-        </li>
-        <li>
-            <a href="/admin/support_center" class="flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold
-                <%= activePage === 'support_center' 
-                    ? 'bg-[#C0392B] text-white' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100' 
-                %>
-            ">
-                <i class="fa-solid fa-fw fa-life-ring"></i>
-                <span>Support Center</span>
+
+           
+            <a href="/admin/billing_finance" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'billing_finance') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-credit-card w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Billing & Payments</span>
             </a>
-        </li>
-        <li>
-            <a href="/admin/settings" class="flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold
-                <%= activePage === 'settings' 
-                    ? 'bg-[#C0392B] text-white' 
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100' 
-                %>
-            ">
-                <i class="fa-solid fa-fw fa-gear"></i>
-                <span>Settings</span>
+
+          
+            <a href="/admin/analytics_reports" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'analytics_reports') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-chart-pie w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Analytics & Reports</span>
             </a>
-        </li>
-    </ul>
-</nav>
+
+          
+            <a href="/admin/support_center" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'support_center') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-headset w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Support Center</span>
+            </a>
+
+           
+            <a href="/admin/settings" 
+               class="flex items-center px-4 py-2 mt-2 rounded-md
+                      <%= (activePage === 'settings') 
+                         ? 'bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white' 
+                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white' %>">
+                <i class="fas fa-cog w-5 h-5"></i>
+                <span class="mx-4 font-medium whitespace-nowrap">Account Settings</span>
+            </a>
+           
+ 
+        </nav>
+
+        <footer class="mt-auto text-xs text-slate-500 dark:text-slate-400">
+            
+            <div class="mb-2">
+                <div>
+                     <span class="text-[#C0392B] text-sm font-bold">REVA</span> 
+                </div>
+                <div>
+                    <span class="text-slate-500 dark:text-slate-400 font-light text-sm">ZONE</span>
+                </div>
+                <div>
+                    <span class="text-[#C0392B] text-xs">Demo Version</span>
+                </div>
+            </div>
+            <p> © REVARTIX Confidential</p>
+            <p>REVARTIX, All Rights Reserved. 2025.</p>
+            <p>www.revartix.com | reva.zone@revartix.com</p>
+        </footer>
+    </div>
+</aside>

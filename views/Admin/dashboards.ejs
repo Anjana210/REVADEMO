@@ -3,377 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard |
+    <title>Billing Dashboard |
 Reva Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-        }
+        tailwind.config = { darkMode: 'class' }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <style> 
+    <style>
         body { font-family: 'Inter', sans-serif;
-} 
-        #meterMap { height: 40vh; background-color: #e2e8f0;
-} /* Original height for the dashboard view */
-
-        /* --- FIX: Make the map fill the modal's container --- */
-        #maximized-map-container #meterMap {
-            height: 100%;
-        }
-
-        .dark #meterMap { background-color: #334155;
 }
-        .leaflet-popup-content-wrapper {
-            background-color: #fff;
-color: #333;
-            border-radius: 8px;
-        }
-        .dark .leaflet-popup-content-wrapper {
-            background-color: #1f2937;
-/* dark:bg-gray-800 */
-            color: #e5e7eb;
-/* dark:text-gray-200 */
+        #dash-customer-list::-webkit-scrollbar {
+            display: none;
+}
+        #dash-customer-list {
+            -ms-overflow-style: none;
+scrollbar-width: none;
         }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-gray-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+
     <div class="flex">
+        <%- include('partials_ad/sidebar_ad', { activePage: activePage }) %>
 
-        <%- include('partials_ad/sidebar_ad') %>
-
-        <main class="flex-1 p-6 md:p-8">
+        <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
             <header class="flex justify-between items-center mb-8">
-                 <div>
-    
-                <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Admin Dashboard</h1>
-                    <p class="text-slate-500 dark:text-slate-400 mt-1">Key metrics and operational overview.</p>
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 
+dark:text-white">Billing Dashboard</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Analytics and performance overview.</p>
                 </div>
                  <div class="flex items-center gap-4">
-                
-    <div class="relative" id="user-dropdown">
-                        <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                    <div class="relative" id="user-dropdown">
+               
+         <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
                             <span class="font-semibold text-sm"><%= user.name %></span>
-                             <i 
-class="fas fa-chevron-down text-xs"></i>
-                        </button>
-                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-20 border border-slate-200 dark:border-slate-700 py-1">
-                            <a href="/logout" class="flex items-center gap-3 px-4 py-2 
-text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
-                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                    
+    </button>
+                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
+                            <a href="/logout" class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                  
+              <i class="fa-solid fa-arrow-right-from-bracket"></i>
                                 <span>Logout</span>
                             </a>
-  
-                      </div>
+                        
+ </div>
                     </div>
                     <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
-                         <i class="fas fa-moon"></i>
-  
-                  </button>
-                </div>
+                        <i class="fas fa-moon"></i>
+                    </button>
+    
+             </div>
             </header>
 
-            <div class="space-y-6">
-                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                   
- <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 border border-slate-200 dark:border-gray-700 flex items-center">
-                         <div class="p-4 bg-red-100 dark:bg-red-900/40 rounded-lg mr-5">
-                            <i class="fas fa-coins text-3xl text-red-600 dark:text-red-400"></i>
-                        </div>
-  
-                      <div>
-                             <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400">Total Revenue (Month)</h3>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">SAR 1.2M</p>
-          
-                  <p class="text-xs text-green-600 dark:text-green-400 flex items-center mt-1"><i class="fas fa-arrow-up mr-1"></i> 5.2%</p>
-                         </div>
-                    </div>
-                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 
-border border-slate-200 dark:border-gray-700 flex items-center">
-                         <div class="p-4 bg-blue-100 dark:bg-blue-900/40 rounded-lg mr-5">
-                            <i class="fas fa-tint text-3xl text-blue-600 dark:text-blue-400"></i>
-                        </div>
-         
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div>
-                            <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400">Water Usage (Month)</h3>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">30,400 m³</p>
-                 
-           <p class="text-xs text-red-600 dark:text-red-400 flex items-center mt-1"><i class="fas fa-arrow-up mr-1"></i> 1.8%</p>
-                        </div>
-                    </div>
-                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 border border-slate-200 dark:border-gray-700 flex items-center">
-    
-                    <div class="p-4 bg-green-100 dark:bg-green-900/40 rounded-lg mr-5">
-                            <i class="fas fa-percent text-3xl text-green-600 dark:text-green-400"></i>
-                        </div>
+                    <label for="dash-year-select" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Year</label>
+          
+          <select id="dash-year-select" class="w-full rounded-lg border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm">
+                        </select>
+                </div>
+                
+                <div>
+          
+          <label for="dash-customer-search" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Customer</label>
+                    <input type="hidden" id="dash-customer-select">
+                    
+                    <div class="relative" id="customer-dropdown-container">
+                   
+     <input type="text" id="dash-customer-search" 
+                               class="w-full rounded-lg border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm pr-10" 
+                               placeholder="Select a year first" disabled>
                   
-       <div>
-                            <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400">Collection Efficiency</h3>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">92.5%</p>
-                            
-<p class="text-xs text-green-600 dark:text-green-400 flex items-center mt-1"><i class="fas fa-arrow-up mr-1"></i> 2.1%</p>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 border border-slate-200 dark:border-gray-700 flex items-center">
-                
-        <div class="p-4 bg-purple-100 dark:bg-purple-900/40 rounded-lg mr-5">
-                            <i class="fas fa-tachometer-alt text-3xl text-purple-600 dark:text-purple-400"></i>
-                        </div>
-                        <div>
-      
-                      <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400">Active Meters</h3>
-                            <p class="text-2xl font-bold text-slate-900 dark:text-white">4,850</p>
-                             <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center mt-1">99.8% Online</p>
-     
-                   </div>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 border border-slate-200 dark:border-gray-700 flex items-center">
-                        <div class="p-4 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg mr-5">
-  
-                          <i class="fas fa-user-plus text-3xl text-indigo-600 dark:text-indigo-400"></i>
-                        </div>
-                        <div>
-                     
-       <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400">New Customers (Month)</h3>
-                             <p class="text-2xl font-bold text-slate-900 dark:text-white">124</p>
-                            <p class="text-xs text-green-600 dark:text-green-400 flex items-center mt-1"><i class="fas fa-arrow-up mr-1"></i> 10%</p>
-                
-        </div>
-                    </div>
-                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-5 border border-slate-200 dark:border-gray-700 flex items-center">
-                        <div class="p-4 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg mr-5">
-            
-                <i class="fas fa-exclamation-triangle text-3xl text-yellow-500 dark:text-yellow-400"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-semibold 
-text-slate-500 dark:text-slate-400">Open Alerts</h3>
-                             <p class="text-2xl font-bold text-slate-900 dark:text-white">12</p>
-                            <p class="text-xs text-slate-500 dark:text-slate-400 flex items-center mt-1">Leaks & Low Battery</p>
-                        </div>
-    
-                </div>
-                 </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-slate-200 dark:border-gray-700">
-                   
-      <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">Monthly Performance Comparison</h3>
-                        <canvas id="performanceComparisonChart"></canvas>
-                    </div>
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-slate-200 dark:border-gray-700 relative">
-              
-           <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">Live Meter Status Map (Riyadh)</h3>
-                        <button id="maximize-map-btn" class="absolute top-16 right-3 z-20 bg-white dark:bg-gray-600 text-slate-700 dark:text-slate-200 p-1.5 rounded-md shadow-lg hover:bg-slate-100 dark:hover:bg-gray-500 transition-colors" title="Maximize Map">
-                            <i class="fas fa-expand"></i>
+      <button id="dash-customer-toggle" class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600 dark:hover:text-white" disabled>
+                            <i class="fas fa-chevron-down text-xs"></i>
                         </button>
-                        <div id="meterMap" class="rounded-lg z-10"></div>
+                        
+    
+                    <div id="dash-customer-list" class="absolute hidden z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                            </div>
                     </div>
                 </div>
-
-            </div>
-     
-    </main>
-    </div>
-
-    <div id="map-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
-        <div class="relative bg-slate-100 dark:bg-gray-900 p-4 rounded-lg shadow-xl w-[95%] h-[95%] flex flex-col">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Live Meter Status Map</h3>
-                <button id="close-modal-btn" class="text-slate-600 dark:text-slate-300 hover:bg-red-500 hover:text-white rounded-full w-8 h-8 flex items-center justify-center transition-colors" title="Close">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-            <div id="maximized-map-container" class="flex-1 rounded-lg"></div>
-        </div>
-    </div>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            let map, tileLayer;
-
-            const isDarkMode = () => document.documentElement.classList.contains('dark');
-// --- Chart.js Initializations ---
-            const getChartColors = () => {
-                return {
-                    textColor: isDarkMode() ?
-'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-                    gridColor: isDarkMode() ?
-'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-                };
-};
-
-            // Performance Comparison Chart
-            const ctxPerformance = document.getElementById('performanceComparisonChart').getContext('2d');
-const performanceComparisonChart = new Chart(ctxPerformance, {
-                type: 'bar',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                    datasets: [
-              
-           {
-                            label: 'Revenue (SAR)',
-                            data: [950000, 1050000, 1100000, 1020000, 1150000, 1200000],
-                         
-   backgroundColor: 'rgba(220, 38, 38, 0.6)',
-                            yAxisID: 'y',
-                        },
-                         {
+ 
                
-             label: 'Usage (m³)',
-                            data: [28000, 28500, 29000, 28200, 29800, 30400],
-                            backgroundColor: 'rgba(59, 130, 246, 0.6)', // blue-500
-                 
-           yAxisID: 'y1',
-                        },
-                    ]
-                },
-                options: {
+                </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex 
+items-center justify-center">
+                        <i class="fas fa-hand-holding-dollar text-2xl text-green-600 dark:text-green-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Revenue</p>
+ 
+                       <p id="kpi-total-revenue" class="text-2xl font-bold text-slate-900 dark:text-white">SAR 0.00</p>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg flex items-center gap-4">
            
-          responsive: true,
-                    scales: {
-                        x: {
-                            ticks: { color: getChartColors().textColor },
-           
-                  grid: { color: getChartColors().gridColor }
-                        },
-                        y: {
-                            type: 
-'linear',
-                             display: true,
-                            position: 'left',
-                            beginAtZero: true,
-            
-                 ticks: { color: getChartColors().textColor },
-                            grid: { color: getChartColors().gridColor },
-                            title: { display: true, text: 'Revenue (SAR)', color: getChartColors().textColor }
-          
-               },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-  
-                           position: 'right',
-                             beginAtZero: true,
-                            ticks: { color: getChartColors().textColor },
-          
-                   grid: { drawOnChartArea: false },
-                            title: { display: true, text: 'Usage (m³)', color: getChartColors().textColor }
-                        },
-                
-    },
-                     plugins: { legend: { labels: { color: getChartColors().textColor } } }
-                }
-            });
-// --- Leaflet.js Map Initialization ---
-            const updateMapTheme = () => {
-                const stadiaApiKey = 'YOUR_STADIA_API_KEY';
-// <-- IMPORTANT: REPLACE WITH YOUR KEY
-                let theme = isDarkMode() ?
-'alidade_smooth_dark' : 'alidade_smooth';
-                let newUrl = `https://tiles.stadiamaps.com/tiles/${theme}/{z}/{x}/{y}{r}.png?api_key=${stadiaApiKey}`;
-                
-                if (tileLayer) {
-                    tileLayer.setUrl(newUrl);
-}
-            };
-// Center of Riyadh: 24.7136° N, 46.6753° E
-            map = L.map('meterMap', { attributionControl: false }).setView([24.7136, 46.6753], 11);
-const stadiaApiKey = 'YOUR_STADIA_API_KEY'; // <-- IMPORTANT: REPLACE WITH YOUR KEY
-            const initialTheme = isDarkMode() ?
-'alidade_smooth_dark' : 'alidade_smooth';
-            
-            tileLayer = L.tileLayer(
-                `https://tiles.stadiamaps.com/tiles/${initialTheme}/{z}/{x}/{y}{r}.png?api_key=${stadiaApiKey}`, {
-                maxZoom: 20,
-                attribution: '&copy; <a href="https://stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
-            }).addTo(map);
-const meterData = [
-                { id: 'NWC-589745', lat: 24.7742, lng: 46.7386, status: 'online', reading: '152.3 m³' },
-                { id: 'NWC-365897', lat: 24.7088, lng: 46.6809, status: 'low_battery', reading: '91.8 m³' },
-                { id: 'NWC-881234', lat: 24.6543, lng: 46.7121, status: 'offline', reading: '112.5 m³' },
-             
-    { id: 'NWC-123456', lat: 24.7251, lng: 46.6432, status: 'online', reading: '205.1 m³' },
-            ];
-const statusColors = {
-                online: '#22c55e', // green-500
-                low_battery: '#f59e0b', // amber-500
-                offline: '#ef4444' // red-500
-            };
-meterData.forEach(meter => {
-                const marker = L.circleMarker([meter.lat, meter.lng], {
-                    radius: 8,
-                    fillColor: statusColors[meter.status],
-                    color: '#fff',
+         <div class="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                        <i class="fas fa-tint text-2xl text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                    <div>
               
-      weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).addTo(map);
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Consumption</p>
+                        <p id="kpi-total-consumption" class="text-2xl font-bold text-slate-900 dark:text-white">0.00 m³</p>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 
+p-6 rounded-xl shadow-lg flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
+                        <i class="fas fa-file-invoice text-2xl text-orange-600 dark:text-orange-400"></i>
+                    </div>
+                  
+  <div>
+                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Total Bills</p>
+                        <p id="kpi-total-bills" class="text-2xl font-bold text-slate-900 dark:text-white">0</p>
+                    </div>
+                </div>
+    
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                        <i class="fas fa-calculator text-2xl text-red-600 dark:text-red-400"></i>
+                    </div>
+   
+                 <div>
+                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Average Bill</G-P>
+                        <p id="kpi-avg-bill" class="text-2xl font-bold text-slate-900 dark:text-white">SAR 0.00</p>
+                    </div>
+    
+            </div>
+            </div>
 
-                marker.bindPopup(`
-                   
-  <div class="font-sans">
-                        <p class="font-bold">Meter ID: <span class="font-mono">${meter.id}</span></p>
-                        <p><strong>Status:</strong> ${meter.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
-                        <p><strong>Last Reading:</strong> ${meter.reading}</p>
-             
-        </div>
-                `);
-            });
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-hand-holding-dollar text-green-600 dark:text-green-400"></i>
+                        <span>Invoice Revenue (SAR)</span>
+                    </h3>
+                            <div class="h-80">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                        <i class="fas fa-tint text-blue-600 dark:text-blue-400"></i>
+                        <span>Water Consumption (m³)</span>
+                    </h3>
+                    <div class="h-80">
+                        <canvas id="consumptionChart"></canvas>
+                    </div>
+                
+</div>
+            </div>
 
-            // Map Modal Logic
-            const maximizeBtn = document.getElementById('maximize-map-btn');
-            const mapModal = document.getElementById('map-modal');
-            const closeModalBtn = document.getElementById('close-modal-btn');
-            const originalMapContainer = document.getElementById('meterMap');
-            const modalMapContainer = document.getElementById('maximized-map-container');
-            const originalMapParent = originalMapContainer.parentElement;
-            
-            maximizeBtn.addEventListener('click', () => {
-                modalMapContainer.appendChild(originalMapContainer);
-                mapModal.classList.remove('hidden');
-                setTimeout(() => map.invalidateSize(), 100);
-            });
+        </main>
+    </div>
 
-            closeModalBtn.addEventListener('click', () => {
-                originalMapParent.appendChild(originalMapContainer);
-                mapModal.classList.add('hidden');
-                setTimeout(() => map.invalidateSize(), 100);
-            });
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    
+    <script src="/js/dashboards_tailwind.js"></script>
 
-
-// This listener reacts to the theme change to update page-specific elements
-            const themeToggle = document.getElementById('theme-toggle');
-themeToggle.addEventListener('click', () => {
-                 setTimeout(() => {
-                    updateMapTheme();
-                    const newColors = getChartColors();
-                    performanceComparisonChart.options.scales.x.ticks.color = newColors.textColor;
-            
-        performanceComparisonChart.options.scales.y.ticks.color = newColors.textColor;
-                    performanceComparisonChart.options.scales.y1.ticks.color = newColors.textColor;
-                    performanceComparisonChart.options.scales.x.grid.color = newColors.gridColor;
-                    performanceComparisonChart.options.scales.y.grid.color = newColors.gridColor;
-                    performanceComparisonChart.options.plugins.legend.labels.color = newColors.textColor;
-performanceComparisonChart.options.scales.y.title.color = newColors.textColor;
-                    performanceComparisonChart.options.scales.y1.title.color = newColors.textColor;
-                    performanceComparisonChart.update();
-                 }, 50);
-            });
-        });
-</script>
-        <footer class="fixed bottom-4 right-4 text-xs text-slate-500 dark:text-slate-400">
-        <p>© REVARTIX Confidential, REVARTIX, All Rights Reserved.
-2025.</p>
-        <p class="text-right">www.revartix.com |
-Reva.support@revartix.com</p>
-    </footer>
-    <%- include('partials_ad/scripts_ad') %> 
+    <%- include('partials_ad/scripts_ad') %>
 </body>
 </html>

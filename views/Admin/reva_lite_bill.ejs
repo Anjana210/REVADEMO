@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reva Bill Processor | Reva Platform</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' };
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .modal-backdrop {
+            transition: opacity 0.2s ease-in-out;
+        }
+        .step-container {
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 dark:bg-gray-900 text-slate-800 dark:text-slate-200 transition-colors duration-300">
+    <div class="flex">
+        <%- include('partials_ad/sidebar_ad', { activePage: activePage }) %>
+
+        <main class="flex-1 h-screen overflow-y-auto p-6 md:p-8">
+            <header class="flex justify-between items-center mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Manual Bill 
+Processor</h1>
+                    <p class="text-slate-500 dark:text-slate-400 mt-1">Bill processing from a CSV file.</p>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="relative" id="user-dropdown">
+               
+                    <button id="dropdown-toggle" class="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                            <span class="font-semibold text-sm"><%= user.name %></span>
+                            <i class="fas fa-chevron-down text-xs"></i>
+         
+                    </button>
+
+                        <div id="dropdown-menu" class="absolute hidden right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl z-10 border border-slate-200 dark:border-slate-700 py-1">
+                            <a href="/logout" 
+ class="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                  
+                               <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                <span>Logout</span>
+        
+                             </a>
+                        
+</div>
+                    </div>
+
+                    <button id="theme-toggle" class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+       
+                         <i class="fas fa-moon"></i>
+                    </button>
+     
+                </div>
+            </header>
+
+            <div class="flex flex-col gap-8">
+                <div class="border-b border-slate-200 dark:border-gray-700">
+                    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                        <button type="button" id="tab-master-data" 
+                                class="tab-btn 
+                                       bg-blue-100 text-blue-700 dark:bg-gray-700 dark:text-white rounded-lg border-b-0
+                                       px-1 py-4 text-sm font-medium whitespace-nowrap" 
+                                data-tab="master">
+                            Upload Master Data
+                        </button>
+                        
+                        <button type="button" id="tab-billing-data" 
+                                class="tab-btn 
+                                       border-b-2 border-transparent 
+                                       px-1 py-4 text-sm font-medium text-slate-500 dark:text-slate-400 
+                                       opacity-50 cursor-not-allowed whitespace-nowrap" 
+                                data-tab="billing" disabled>
+                            Upload CSV Billing Data
+                        </button>
+                    </nav>
+                </div>
+
+   
+                 <div id="tab-content-master" class="tab-content flex flex-col gap-8">
+
+                    <div id="step-1-container" class="bg-white dark:bg-gray-800 rounded-xl shadow-xl step-container">
+                        <div class="p-6 md:p-8 border-b border-slate-200 dark:border-gray-700">
+   
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white">
+                                <i class="fas fa-file-import text-blue-500 mr-2"></i>
+                    
+                             Step 1: Upload Device Serial ID & Customer Name
+                   
+                            </h2>
+                            <p class="text-slate-500 dark:text-slate-400 mt-1">Upload the 
+ master list of Device Serial IDs and Customer Names.
+                                License limit check is performed here.</p>
+                        </div>
+
+                        <form id="ref-upload-form">
+                            <div class="p-6 md:p-8">
+       
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Upload Reference File</label>
+
+   
+                                     <div id="ref-drop-zone" class="mt-1 flex justify-center px-6 pt-10 pb-10 border-2 border-slate-300 dark:border-gray-600 border-dashed rounded-lg">
+                
+                                       
+                                         <div class="space-y-1 text-center">
+                                            <i class="fas fa-id-badge text-5xl text-slate-400"></i>
+
+                                  
+               
+                                             <div class="flex text-sm text-slate-600 dark:text-slate-400">
+                                                <label for="ref-file-input" class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-red-600 hover:text-red-500">
+          
+                                                    <span>Upload a file</span>
+                   
+                                                     <input id="ref-file-input" name="csv_file" type="file" class="sr-only" accept=".csv" required />
+                                
+                            
+                                                 </label>
+                                                <p class="pl-1">or drag and drop</p>
+                            
+             
+                                            </div>
+
+                                            
+                                             <p class="text-xs text-slate-500" id="ref-file-name">2-Column CSV file (Device Serial, Customer Name)</p>
+                                        </div>
+               
+                                    
+                                 </div>
+
+                                    <div id="ref-upload-status" class="mt-3"></div>
+                                </div>
+                     
+         
+                             </div>
+
+                            <div class="p-6 md:p-8 border-t border-slate-200 dark:border-gray-700">
+                                <button type="submit" id="ref-process-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center 
+ gap-2">
+                        
+                                    <i class="fas fa-upload"></i>
+                                    <span>Upload & 
+ Lock Devices</span>
+                                </button>
+                            </div>
+   
+                        </form>
+            
+                 </div>
+
+                    <div id="step-2-container" class="bg-white dark:bg-gray-800 rounded-xl shadow-xl step-container" style="display: none;">
+                        <div class="p-6 md:p-8 border-b border-slate-200 dark:border-gray-700">
+                  
+                 
+                             <h2 class="text-2xl font-bold text-slate-900 dark:text-white">
+                                <i class="fas fa-edit text-orange-500 mr-2"></i>
+                                Step 2: Update Reference Data
+             
+                                </h2>
+  
+                            <p class="text-slate-500 dark:text-slate-400 mt-1">Modify existing Device Serial id or Customer Names in the master list.
+ **Billing CSV must use the Device Serial ids defined here.**</p>
+                        </div>
+                        <div class="p-6 md:p-8">
+                            <div id="reference-data-table-container">
+            
+                             
+                                <p class="text-sm text-slate-500 dark:text-slate-400">Loading reference data...</p>
+                            </div>
+                       
+                         <div id="ref-update-status" class="mt-3"></div>
+                            <div class="mt-6 pt-6 border-t border-slate-200 dark:border-gray-700">
+            
+                                <button type="button" id="apply-ref-changes-btn" class="bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2">
+ 
+                                     <i class="fas fa-sync-alt"></i>
+                                    <span>Apply All Changes</span>
+ 
+                        
+                     </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+    
+                 <div id="tab-content-billing" class="tab-content flex flex-col gap-8 hidden">
+                    
+                    <div id="step-3-container" class="bg-white dark:bg-gray-800 rounded-xl shadow-xl step-container">
+            
+                         <div class="p-6 md:p-8 border-b border-slate-200 dark:border-gray-700">
+                   
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white">
+                                
+                                 <i class="fas fa-cloud-upload-alt text-red-500 mr-2"></i>
+                                Step 3: Upload Billing Data
+               
+                            </h2>
+                 
+                         <p class="text-slate-500 dark:text-slate-400 mt-1">Upload the consumption file.
+ Requires Device Serials IDs to match Master Data.</p>
+                        </div>
+
+                        <form id="billing-form">
+                            <div class="p-6 md:p-8">
+             
+ 
+                                 <div>
+                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Upload Consumption File</label>
+
+                         
+                         <div 
+                                        id="drop-zone" class="mt-1 flex justify-center px-6 pt-10 pb-10 border-2 border-slate-300 dark:border-gray-600 border-dashed rounded-lg">
+                                     
+                         <div class="space-y-1 text-center">
+                                            <i class="fas fa-file-csv 
+                                                
+                                                 text-5xl text-slate-400"></i>
+
+                                            <div class="flex text-sm text-slate-600 dark:text-slate-400">
+                                                <label for="file-input" class="relative 
+ 
+                                                    cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-red-600 hover:text-red-500">
+                                          
+                                                     <span>Upload a file</span>
+                                        
+                                                
+                                                     <input id="file-input" name="consumption_file" type="file" class="sr-only" accept=".csv" required />
+                                                </label>
+                                 
+        
+                                                         <p class="pl-1">or drag and drop</p>
+                                            </div>
+
+            
+                                          
+                                            <p class="text-xs text-slate-500" id="file-name">10-Column CSV file (Consumption data)</p>
+
+                        
+                                                 <a href="/samples/sample_billing_upload.csv" download class="text-xs font-medium text-red-600 hover:text-red-500 hover:underline pt-1">
+                                  
+                                      
+                                                     <i class="fas fa-download mr-1"></i> Download Sample CSV
+                                            </a>
+                                    
+    
+                                             </div>
+                                    </div>
+
+                            
+                         <div id="upload-status" class="mt-3"></div>
+                      
+                                </div>
+                            </div>
+        
+                 
+                        
+              
+                            <div id="step-4-container" class="bg-white dark:bg-gray-800 rounded-xl shadow-xl">
+             
+                                 <div class="p-6 md:p-8 border-b border-slate-200 dark:border-gray-700">
+                                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white">
+    
+                                
+                                         <i class="fas fa-file-invoice-dollar text-red-500 mr-2"></i> Step 4: Set Up Billing Information
+                                    </h2>
+                  
+                            
+                                 </div>
+
+                                <div class="p-6 md:p-8">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+          
+                                           <div class="space-y-6">
+                                            <div>
+                         
+                         <label for="billing-month" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Billing Month & Year</label>
+                                        
+                                                 <input type="month" id="billing-month" name="bill_month" class="w-full rounded-lg border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm" required />
+         
+                                            </div>
+
+                           
+                                                 <div>
+                     
+                                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Other Charges (Applied to all bills)</label>
+   
+                                                  <div id="other-charges-container" class="space-y-3"></div>
+            
+                                         
+                                                 <button type="button" id="add-charge-btn" class="mt-3 text-sm text-red-600 hover:text-red-500 font-medium flex items-center gap-1">
+                                                    <i class="fas 
+                             
+                                                         fa-plus"></i> Add Charge (Max 3)
+                                                </button>
+                     
+                                             </div>
+    
+                                        </div>
+
+                                 
+                                         <div class="space-y-6">
+                       
+                                            <div>
+                         
+                                                 <label for="tariff" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tariff Rate (per m³)</label>
+                     
+                                              
+                                                 <div class="relative">
+                                                    <input type="number" id="tariff" name="tariff_sar" min="0" step="0.01" placeholder="e.g., 1.75" class="w-full rounded-lg border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm pl-4 pr-16" required />
+  
+                         
+                                                     <span class="absolute inset-y-0 right-0 flex items-center pr-4 text-sm font-semibold text-slate-500">SAR</span>
+                                         
+                       
+                                                  </div>
+                                            </div>
+
+                               
+                                             <div>
+     
+                                                <label for="vat" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">VAT</label>
+                           
+                                                 <div class="relative">
+ 
+                                                    <input type="number" id="vat" name="vat_percent" min="0" step="0.01" placeholder="e.g., 15" class="w-full rounded-lg border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm pl-4 pr-16" required />
+       
+                         
+                                                    <span class="absolute inset-y-0 right-0 flex items-center pr-4 text-sm font-semibold text-slate-500">%</span>
+               
+                                                  </div>
+                      
+                                            </div>
+ 
+                                                 </div>
+                                    </div>
+
+  
+                       
+                                     <div class="pt-8 mt-8 border-t border-slate-200 dark:border-gray-700">
+                                        <button type="submit" id="process-btn" class="w-full bg-red-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2">
+     
+                     
+                                             <i class="fas fa-cogs"></i>
+                                            <span>Validate & Process Bills</span>
+            
+                
+                                         </button>
+                                    </div>
+                                </div>
+    
+    
+                                 </div>
+                        </form>
+                    </div>
+
+                    <div id="step-5-container" class="bg-white dark:bg-gray-800 rounded-xl shadow-xl step-container">
+      
+ 
+                        <div class="p-6 md:p-8 border-b border-slate-200 dark:border-gray-700">
+                            <h2 class="text-2xl font-bold text-slate-900 dark:text-white">
+                                <i class="fas fa-cloud-download-alt text-green-500 mr-2"></i> Step 5: 
+ Process Bills
+     
+                            </h2>
+                            <p class="text-slate-500 dark:text-slate-400 mt-1">Select a processed month to view or download the final bills.To choose a different month, first click the 'Modify Selection' button.</p>
+               
+                     </div>
+
+  
+                        <div class="p-6 md:p-8">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                              
+   
+           
+                                <div class="md:col-span-1">
+                                    <label for="search-month" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Select billing month and year to process</label>
+     
+                         
+                                    <select id="search-month" class="w-full rounded-lg border-slate-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm">
+                                
+                                         <option value="">Loading available months...</option>
+                                    </select>
+      
+                                </div>
+
+               
+                                 <div>
+                                    <button id="fetch-data-btn" class="w-full bg-red-600 text-white font-bold 
+                                        py-2.5 
+ px-4 rounded-lg shadow-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2">
+                                        <i class="fas fa-search"></i>
+                                        <span>Submit</span>
+         
+ 
+                                    </button>
+
+                                    <button type="button" id="clear-data-btn" class="w-full bg-red-600 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2 hidden">
+            
+         
+                                        <i class="fas fa-redo"></i>
+                                        <span>Update Selection</span>
+         
+                                     </button>
+ 
+                                </div>
+
+                                <div class="relative flex items-center justify-end gap-2">
+   
+                                   
+                                    <button id="download-all-btn" class="w-full bg-green-600 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2 hidden" disabled>
+                  
+                                         <i class="fas fa-file-archive"></i>
+                                     
+                                       
+                                          <span>Download All Bills</span>
+                                    </button>
+                                </div>
+                           
+  
+                               </div>
+
+                            <div id="fetch-status" class="mt-4"></div>
+
+                            <div class="mt-6 flow-root">
+              
+                                     <div class="-mx-6 -my-2 overflow-x-auto">
+    
+                                    <div class="inline-block min-w-full py-2 align-middle px-6 relative">
+                                 
+                                         <div class="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg max-h-96 overflow-y-auto">
+              
+                                            <table class="min-w-full divide-y divide-slate-300 dark:divide-gray-700" id="bill-results-table">
+                      
+                                                 <thead class="bg-slate-50 dark:bg-gray-700 sticky top-0 z-10">
+            
+                                                    <tr>
+     
+                                                                         <th data-column="col-id" scope="col" class="py-3.5 
+                                             
+                                                            pl-6 pr-3 text-left text-sm font-semibold text-slate-900 dark:text-white">ID</th>
+                                                        <th data-column="col-serial" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white">Device Serial</th>
+             
+                                                         <th data-column="col-customer" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white">Customer Name</th>
+                                               
+                                                     <th data-column="col-insert-ts" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white">Insert Timestamp</th>
+                                                        <th data-column="col-update-ts" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white">Last Update</th>
+               
+                                                         <th data-column="col-consumption" scope="col" class="px-3 py-3.5 text-left text-sm 
+                                                    
+                                                             font-semibold text-slate-900 dark:text-white" style="display: none;">Consumption</th>
+                                                        <th data-column="col-total" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Total Bill</th>
+
+                    
+             
+                                                        <th data-column="col-bill-month" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Billing Month</th>
+                    
+                                                                         <th data-column="col-tariff" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold 
+                                                        
+                                                             text-slate-900 dark:text-white" style="display: none;">Tariff Rate</th>
+                                                        <th data-column="col-vat" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">VAT (%)</th>
+                        
+     
+                                                        <th data-column="col-cust-hash" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Customer #</th>
+                            
+                                                             <th data-column="col-bldg-hash" scope="col" class="px-3 
+                                                            py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Building 
+ #</th>
+                                                        <th data-column="col-apt-hash" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Apartment #</th>
+                        
+        
+                                                                         <th data-column="col-start-date" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Bill Start Date</th>
+                                       
+                 
+                                                        <th data-column="col-end-date" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Bill End Date</th>
+               
+                                                         <th data-column="col-inv-date" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Invoice Date</th>
+                  
+                             
+                                                         <th data-column="col-read-time" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Final Reading Time</th>
+                                                 
+           
+                                                                          <th data-column="col-read-vol" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Final Reading (m³)</th>
+                                          
+                                                         <th data-column="col-c1-desc" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Charge 1 Desc</th>
+           
+                                                        <th data-column="col-c1-rate" scope="col" class="px-3 py-3.5 text-left 
+ text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Charge 1 Rate</th>
+                                          
+                                                   
+                                                          <th data-column="col-c2-desc" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Charge 2 Desc</th>
+                                                        <th data-column="col-c2-rate" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Charge 2 Rate</th>
+    
+         
+                                                                         <th data-column="col-c3-desc" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Charge 3 Desc</th>
+                                   
+     
+                                                                         <th data-column="col-c3-rate" scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-slate-900 dark:text-white" style="display: none;">Charge 3 Rate</th>
+
+                                    
+                                                     <th data-column="col-actions" scope="col" class="relative py-3.5 pl-3 pr-6 text-right">
+   
+                                                            <span class="text-sm font-semibold text-slate-900 dark:text-white">Actions</span>
+      
+                                                   
+                                                        </th>
+
+           
+                                                                         <th scope="col" class="sticky right-0 bg-slate-50 dark:bg-gray-700 py-3.5 pl-3 pr-4">
+                   
+                            
+                                                                 <button type="button" id="col-toggle-btn" class="text-slate-500 dark:text-slate-300 hover:text-slate-700 dark:hover:text-white" title="Toggle Columns">
+                                                   
+         
+                                                                         <i class="fas fa-filter"></i>
+                                           
+                                                     </button>
+                         
+                                                        </th>
+  
+                                                                         </tr>
+                 
+                                 
+                                                 </thead>
+
+                                                <tbody class="divide-y divide-slate-200 dark:divide-gray-600 bg-white dark:bg-gray-800" id="results-tbody">
+               
+                
+                                                     <tr>
+                                                        <td colspan="24" class="px-6 py-4 text-center text-sm text-slate-500">
+ 
+ 
+                                                                             No data fetched.
+ Please select a month.
+                                                        </td>
+                                                    </tr>
+                                            
+ 
+                                                </tbody>
+                                            </table>
+
+        
+                                                 <div id="col-toggle-menu" class="absolute hidden right-6 top-0 z-20 mt-12 
+                                                w-64 rounded-md bg-white dark:bg-gray-700 shadow-lg ring-1 ring-black ring-opacity-5 
+ p-2 space-y-1" style="max-height: 300px; overflow-y: auto;">
+                                                <h4 class="px-2 pt-1 pb-2 text-xs font-bold text-slate-400 uppercase text-left">Visible Columns</h4>
+
+                              
+        
+                                                         <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                  
+                                                     <input type="checkbox" data-column="col-id" class="rounded text-red-600 focus:ring-red-500" />
+              
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">ID</span>
+                      
+                                                 </label>
+
+          
+                                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+      
+                                               
+                                                    <input type="checkbox" 
+ data-column="col-serial" class="rounded text-red-600 focus:ring-red-500" />
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Device Serial</span>
+                                     
+  
+                                                               </label>
+
+                                                <label class="flex items-center gap-2 px-2 py-1.5 
+ rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                               
+                                                    <input type="checkbox" data-column="col-customer" class="rounded text-red-600 focus:ring-red-500" />
+       
+                                                             <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Customer Name</span>
+                 
+                                 
+                                                 </label>
+                                                
+                                     
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                    <input type="checkbox" data-column="col-insert-ts" class="rounded text-red-600 focus:ring-red-500" />
+                     
+                                                     <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Insert Timestamp</span>
+                                                </label>
+                
+                                 
+                                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+          
+                                                           <input type="checkbox" data-column="col-update-ts" class="rounded text-red-600 focus:ring-red-500" />
+                                                    
+                                                     <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Last Update</span>
+                                                </label>
+
+                                               
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+           
+                                                    <input type="checkbox" data-column="col-consumption" class="rounded text-red-600 focus:ring-red-500" />
+                    
+                                                     <span 
+                                                        class="text-sm font-medium text-slate-700 dark:text-slate-200">Consumption (m³)</span>
+       
+                                                         </label>
+
+                                                
+           
+                                                          <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                    <input 
+ type="checkbox" data-column="col-total" class="rounded text-red-600 focus:ring-red-500" />
+                                
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Total Bill</span>
+      
+                                                           </label>
+
+                           
+                               
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                    <input type="checkbox" data-column="col-actions" class="rounded text-red-600 focus:ring-red-500" />
+           
+    
+                                                                 <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Actions</span>
+                                                
+                                                 </label>
+
+       
+                                                <div class="border-t border-slate-200 dark:border-gray-600 my-1"></div>
+
+                                         
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md 
+                                                    hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                               
+                                                     <input type="checkbox" data-column="col-bill-month" class="rounded text-red-600 focus:ring-red-500" />
+                                       
+                                  
+                                                     <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Billing Month</span>
+                                                </label>
+
+                             
+      
+                                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                     
+                                                     <input type="checkbox" data-column="col-tariff" class="rounded text-red-600 focus:ring-red-500" />
+                  
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Tariff Rate</span>
+    
+                                                               </label>
+
+             
+                                           
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                    <input type="checkbox" data-column="col-vat" 
+                              
+                                                         class="rounded text-red-600 focus:ring-red-500" />
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">VAT (%)</span>
+              
+                           
+                                                </label>
+
+                          
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                  
+                                  
+                                                     <input type="checkbox" data-column="col-cust-hash" class="rounded text-red-600 focus:ring-red-500" />
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Customer #</span>
+                   
+ 
+                                                </label>
+
+                                                <label class="flex items-center gap-2 
+ px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+             
+                                                    <input type="checkbox" data-column="col-bldg-hash" class="rounded text-red-600 focus:ring-red-500" />
+                       
+                                                             <span class="text-sm font-medium 
+                                                        text-slate-700 dark:text-slate-200">Building #</span>
+          
+                                                       </label>
+
+                                                <label class="flex 
+            
+                                                         items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                    
+                                                     <input type="checkbox" data-column="col-apt-hash" class="rounded text-red-600 focus:ring-red-500" />
+                                  
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Apartment #</span>
+   
+                                                               </label>
+
+                             
+                          
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                    <input type="checkbox" data-column="col-start-date" class="rounded text-red-600 focus:ring-red-500" />
+          
+    
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Bill Start Date</span>
+                                       
+                         </label>
+
+       
+                                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                          
+                        
+                                                    <input type="checkbox" data-column="col-end-date" class="rounded text-red-600 focus:ring-red-500" />
+                   
+                                                     <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Bill End Date</span>
+                                 
+                            
+                                     </label>
+
+                                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                      
+      
+                                                    <input type="checkbox" data-column="col-inv-date" class="rounded text-red-600 focus:ring-red-500" />
+                                     
+                                                     <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Invoice Date</span>
+            
+                                                </label>
+
+                    
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+      
+                                                    <input type="checkbox" data-column="col-read-time" class="rounded 
+ text-red-600 focus:ring-red-500" />
+                                                
+                                                  
+                                                     <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Final Reading Time</span>
+                                                </label>
+
+                                          
+  
+                                                                               <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                            
+                                                     <input type="checkbox" data-column="col-read-vol" class="rounded text-red-600 focus:ring-red-500" />
+                          
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Final Reading (m³)</span>
+  
+                                                                               </label>
+
+                    
+                                  
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                    <input type="checkbox" data-column="col-c1-desc" class="rounded text-red-600 focus:ring-red-500" />
+    
+              
+                                                          <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Charge 1 Desc</span>
+                                              
+          
+                                                       </label>
+
+                                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+    
+                                     
+                                                    <input type="checkbox" data-column="col-c1-rate" class="rounded text-red-600 focus:ring-red-500" />
+      
+                                                               <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Charge 1 Rate</span>
+                        
+                        
+                                                 </label>
+
+                                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                  
+ 
+                                                    <input type="checkbox" data-column="col-c2-desc" class="rounded text-red-600 focus:ring-red-500" />
+                                          
+                                                     <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Charge 2 Desc</span>
+  
+                                                </label>
+
+                                  
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 
+                                                    rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                        
+                                                             <input type="checkbox" data-column="col-c2-rate" class="rounded text-red-600 focus:ring-red-500" />
+                                      
+                            
+                                                             <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Charge 2 Rate</span>
+                                                </label>
+
+                      
+           
+                                                <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                
+                                                     <input type="checkbox" data-column="col-c3-desc" class="rounded text-red-600 focus:ring-red-500" />
+                
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Charge 3 
+ Desc</span>
+                                                </label>
+
+          
+                                          
+                                                 <label class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-gray-600 cursor-pointer text-left">
+                                                    
+                                
+                                                     <input type="checkbox" data-column="col-c3-rate" class="rounded text-red-600 focus:ring-red-500" />
+                                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200">Charge 3 Rate</span>
+                
+                     
+                                                </label>
+                                
+                                             </div>
+                                        </div>
+    
+                                    </div>
+        
+                                 </div>
+                            </div>
+        
+                        </div>
+                
+                 </div>
+                </div>
+                </div>
+            </main>
+    </div>
+
+    <div id="bill-details-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+      
+       <div id="modal-backdrop" class="absolute inset-0 
+            bg-black/60 modal-backdrop"></div>
+
+        <div class="relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-xl m-4" style="max-height: 90vh;">
+            <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-gray-700">
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white">
+                    <i class="fas fa-receipt mr-2 
+ text-red-500"></i>
+                  
+                    Bill Details
+                </h3>
+                <button id="modal-close-btn" type="button" class="text-slate-400 hover:text-red-500">
+                    <i class="fas fa-times text-2xl"></i>
+  
+                               </button>
+            </div>
+
+          
+            <div id="modal-bill-details" class="p-6 space-y-6 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script src="/js/reva_lite_bill_admin_tailwind.js"></script>
+    <%- include('partials_ad/scripts_ad') %>
+</body>
+</html>
+}

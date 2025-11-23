@@ -1,0 +1,410 @@
+<%
+// Helper to safely format date, returns '' if input is falsy
+function safeFormatDate(dateStr, formatType = 'full') {
+    // FIX: Check if dateStr is falsy (null, undefined, etc.) or not a string.
+    if (!dateStr || typeof dateStr !== 'string') return '';
+    
+    // Original Check (now safe because we checked the type)
+    if (dateStr.toLowerCase() === 'n/a') return '';
+    
+    try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '-'; // Return dash for invalid date object
+        
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+
+        if (formatType === 'year_month_day') {
+            return `${year}-${month}-${day}`;
+        }
+        return `${day}/${month}/${year}`;
+    } catch (e) {
+        return dateStr;
+    }
+}
+
+// Prepare Data for Template
+const inv_date_raw = bill.invoice_date_csv; // Keep raw for calculation
+const inv_date = safeFormatDate(inv_date_raw, 'year_month_day');
+
+const bill_start = safeFormatDate(bill.bill_start_date, 'year_month_day');
+const bill_end = safeFormatDate(bill.bill_end_date, 'year_month_day');
+
+const consumption_charge_val = parseFloat(consumption_charge);
+// FIX: Rename local variable to avoid conflict and parse the global 'vat_percent'
+const vat_rate_num = parseFloat(vat_percent); 
+const total_bill_val = parseFloat(total_bill);
+
+// Other charges (excluding consumption charge)
+const serviceCharges = charges.map(c => ({
+    description: c.desc,
+    amount_sar: parseFloat(c.rate)
+}));
+
+// Build the Bill Summary Table data structure
+const billSummary = [
+    { 
+        description: 'Water Consumption Value', 
+        before_vat: consumption_charge_val, 
+        // Use vat_rate_num for calculation
+        vat: consumption_charge_val * (vat_rate_num / 100), 
+        after_vat: consumption_charge_val * (1 + vat_rate_num / 100) 
+    }
+];
+
+// Add other charges to the summary
+serviceCharges.forEach(charge => {
+    const charge_vat_amount = charge.amount_sar * (vat_rate_num / 100);
+    billSummary.push({
+        description: charge.description,
+        before_vat: charge.amount_sar,
+        vat: charge_vat_amount,
+        after_vat: charge.amount_sar + charge_vat_amount
+    });
+});
+
+// Calculate Total Row
+const totalBeforeVat = billSummary.reduce((sum, item) => sum + item.before_vat, 0);
+const totalVat = billSummary.reduce((sum, item) => sum + item.vat, 0);
+const totalAfterVat = totalBeforeVat + totalVat;
+
+%>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Service Bill</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .container {
+            width: 760px; /* Standard A4 width less margin */
+            margin: 20px auto;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+        /* --- Header Section --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; /* Align to top */
+            padding-bottom: 20px;
+            border-bottom: 3px solid #ddd; /* Lighter separator */
+            margin-bottom: 20px;
+        }
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .header-left img {
+            max-height: 45px; /* Slightly larger logo */
+            width: auto;
+            margin-bottom: 5px;
+        }
+        .header-right {
+            text-align: right;
+        }
+        .header-right h1 {
+            font-size: 26px; /* Slightly larger title */
+            font-weight: 700;
+            color: #d9534f; /* Reva Red */
+            margin: 0 0 5px 0;
+        }
+        .header-right p {
+            margin: 2px 0;
+            font-size: 12px;
+            color: #555;
+        }
+        /* --- Content Sections --- */
+        .section {
+            margin-bottom: 25px;
+        }
+        .section h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 1px solid #eee; /* Cleaner separator */
+            padding-bottom: 5px;
+            margin: 0 0 10px 0;
+        }
+        /* --- Detail Grid (Customer/Bill Info) --- */
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px 20px;
+            font-size: 14px;
+        }
+        .details-grid > div {
+            padding: 4px 0;
+            display: flex;
+            /* Match the reference PDF where key and value are stacked/separated */
+            justify-content: space-between; 
+            align-items: flex-start;
+        }
+        .details-grid strong {
+            font-weight: 500;
+            color: #555;
+            flex-shrink: 0;
+            padding-right: 10px;
+            text-align: left;
+        }
+        .details-grid span {
+            text-align: right;
+            font-weight: 600;
+            color: #333;
+        }
+        /* --- Consumption Info --- */
+        .consumption-details {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* 4 columns for dates/volume/reading */
+            gap: 10px;
+            font-size: 15px;
+            padding: 10px 0;
+            background-color: #f9f9f9; /* Slight background for this section */
+            border-radius: 4px;
+            padding: 15px;
+        }
+        .consumption-item {
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            border-right: 1px solid #eee;
+        }
+        .consumption-item:last-child {
+            border-right: none;
+        }
+        .consumption-item .value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e70bf; /* A clean blue */
+            margin-bottom: 5px;
+        }
+        .consumption-item .label {
+            font-size: 12px;
+            color: #888;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        /* --- Billing Summary Table --- */
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        .summary-table thead {
+            background-color: #f5f5f5;
+        }
+        .summary-table th, .summary-table td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+        .summary-table th:first-child, .summary-table td:first-child {
+            text-align: left;
+            width: 40%;
+            font-weight: 500;
+        }
+        .summary-table th {
+            font-weight: 600;
+        }
+        .summary-table td.total-row {
+            font-weight: 700;
+            font-size: 16px;
+            color: #d9534f;
+            background-color: #ffeaea; /* Highlight total row */
+        }
+        /* --- Total Due --- */
+        .total-due-box {
+            text-align: right;
+            border-top: 2px solid #ddd;
+            padding-top: 15px;
+        }
+        .total-due-box .label {
+            font-size: 18px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        .total-due-box .amount {
+            font-size: 32px;
+            font-weight: 800;
+            color: #d9534f;
+            margin-top: 0;
+        }
+        /* --- Footer --- */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <% if (company_logo_url) { %>
+                    <img src="<%= company_logo_url %>" alt="Company Logo">
+                <% } else { %>
+                    <span style="font-size: 20px; font-weight: bold; color: #d9534f;">REVA</span>
+                <% } %>
+                <p style="font-size: 16px; font-weight: bold; color: #333; margin-top: 10px;">Water Service Bill</p>
+                <p>Simplified Tax Invoice (VAT Number: [TO BE ADDED])</p>
+            </div>
+            <div class="header-right">
+                <h1 style="color: #333;">INVOICE</h1>
+                <p>Invoice Date: <%= inv_date %></p>
+                <p>Bill No: INV-<%= bill.upload_month.replace('-', '') %>-<%= bill.device_serialno %></p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Customer Information</h2>
+            <div class="details-grid">
+                <div>
+                    <strong>Name:</strong>
+                    <span><%= bill.customer_name %></span>
+                </div>
+                <div>
+                    <strong>Account Number:</strong>
+                    <span><%= bill.customer_hash %></span>
+                </div>
+                <div>
+                    <strong>Building / Apt:</strong>
+                    <span><%= bill.building_hash %> / <%= bill.apartment_hash %></span>
+                </div>
+                <div>
+                    <strong>Meter Number:</strong>
+                    <span><%= bill.device_serialno %></span>
+                </div>
+                <div>
+                    <strong>Address:</strong>
+                    <span>123 Example Street, City</span>
+                </div>
+                <div>
+                    <strong>Meter Diameter:</strong>
+                    <span>N/A</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Bill Details</h2>
+            <div class="details-grid">
+                <div>
+                    <strong>Bill Number:</strong>
+                    <span>INV-<%= bill.upload_month.replace('-', '') %>-<%= bill.device_serialno %></span>
+                </div>
+                <div>
+                    <strong>Bill Issue Date:</strong>
+                    <span><%= inv_date %></span>
+                </div>
+                <div>
+                    <strong>Bill Period:</strong>
+                    <span><%= (bill_start && bill_end) ? '30 Days' : 'N/A' %></span>
+                </div>
+                <div>
+                    <strong>Due Date:</strong>
+                    <% 
+                        let dueDateStr = '-';
+                        if (inv_date_raw) {
+                            try {
+                                // Create a mutable date object from the raw value
+                                const invDate = new Date(inv_date_raw);
+                                // Set due date 20 days later
+                                invDate.setDate(invDate.getDate() + 20);
+                                dueDateStr = safeFormatDate(invDate.toISOString(), 'year_month_day');
+                            } catch (e) {
+                                dueDateStr = '-';
+                            }
+                        }
+                    %>
+                    <span><%= dueDateStr %></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Consumption Details</h2>
+            <div class="consumption-details">
+                <div class="consumption-item">
+                    <div class="value"><%= bill_start || '-' %></div>
+                    <div class="label">Start Consumption Date</div>
+                </div>
+                <div class="consumption-item">
+                    <div class="value"><%= bill_end || '-' %></div>
+                    <div class="label">End Consumption Date</div>
+                </div>
+                <div class="consumption-item">
+                    <div class="value"><%= consumption_m3 %> m³</div>
+                    <div class="label">Total Consumption</div>
+                </div>
+                <div class="consumption-item">
+                    <div class="value"><%= parseFloat(bill.final_reading_volume_m3).toFixed(2) %> m³</div>
+                    <div class="label">Final Reading Volume</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Billing Summary</h2>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Bill Information</th>
+                        <th>Before VAT (SAR)</th>
+                        <th>VAT (<%= vat_rate_num.toFixed(2) %>%) (SAR)</th>
+                        <th>After VAT (SAR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% billSummary.forEach(item => { %>
+                        <tr>
+                            <td><%= item.description %></td>
+                            <td><%= item.before_vat.toFixed(2) %></td>
+                            <td><%= item.vat.toFixed(2) %></td>
+                            <td><%= item.after_vat.toFixed(2) %></td>
+                        </tr>
+                    <% }); %>
+                    
+                    <tr>
+                        <td class="total-row">Total (SAR)</td>
+                        <td class="total-row"><%= totalBeforeVat.toFixed(2) %></td>
+                        <td class="total-row"><%= totalVat.toFixed(2) %></td>
+                        <td class="total-row"><%= totalAfterVat.toFixed(2) %></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="total-due-box">
+            <p class="label">Total Amount (SAR)</p>
+            <p class="amount"><%= totalAfterVat.toFixed(2) %></p>
+        </div>
+
+        <div class="footer">
+            <p>Due Start Date: <%= inv_date %> | Payment Deadline: <%= dueDateStr %></p>
+            <p>This is a system generated invoice. For questions, contact [REVA SUPPORT EMAIL].</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,7 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
 const path = require('node:path');
 const http = require('http');
+const os = require('os');
+const tls = require('tls');
+const { exec } = require('child_process');
 // const PDFDocument = require('pdfkit');
 // const fs = require('fs');
 const { Server } = require("socket.io");
@@ -9,16 +13,24 @@ const { Server } = require("socket.io");
 const cors = require('cors');
 const session = require('express-session');
 //const puppeteer = require('puppeteer');
-const puppeteer = require('puppeteer-core'); // Use the core version
-const chromium = require('@sparticuz/chromium'); // Use Vercel-compatible chromium 
+//const puppeteer = require('puppeteer-core'); // Use the core version
+const puppeteer = require('puppeteer');
+//const chromium = require('@sparticuz/chromium'); // Use Vercel-compatible chromium 
 const port = process.env.PORT || 4000;
 const ejs = require('ejs'); 
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
+const LICENSE_SALT = process.env.LICENSE_SALT || 'dev_only_replace_this_with_a_long_random_secret_for_license_hashing';
 
+const { Pool } = require('pg'); // --- ADDED --- (Step 1: Import the Pool)
+
+const pool = new Pool(); // --- ADDED --- (Step 2: Initialize the Pool)
 app.set('view engine', 'ejs');
 app.use(cors({ origin: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '10mb' }));
 
 app.use(session({
   secret: 'a-secure-secret-key-for-revartix',
@@ -27,25 +39,744 @@ app.use(session({
   cookie: { secure: false }
 }));
 
-// --- NEW: Middleware for Role-Based Access Control ---
+const { requireAdmin, requireCustomer, requireStaff, requireMaster, requireWrite, requireSuperAdmin } = require('./middleware.js');
 
-// Middleware to ensure user is a logged-in Admin
-const requireAdmin = (req, res, next) => {
-    if (!req.session.user || req.session.user.role !== 'admin') {
-        // If not an admin, deny access. You can redirect or show an error.
-        return res.status(403).send('<h1>403 Forbidden</h1><p>You do not have permission to access this page.</p>');
+// --- Ensure REVA ZONE Control Center schema exists and seed initial data ---
+async function ensureControlCenterSchema() {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Enums (compat with older Postgres versions without IF NOT EXISTS for TYPE)
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'company_status') THEN
+          CREATE TYPE company_status AS ENUM('Active','Suspended','Trial','Cancelled');
+        END IF;
+      END $$;`);
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'db_health') THEN
+          CREATE TYPE db_health AS ENUM('Healthy','Warning','Critical');
+        END IF;
+      END $$;`);
+
+    // companies (create if not exists; fallback to minimal if a different schema already exists)
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='companies') THEN
+          CREATE TABLE companies (
+            id SERIAL PRIMARY KEY,
+            company_name VARCHAR(255) UNIQUE NOT NULL,
+            reva_platform_id VARCHAR(50) UNIQUE,
+            address TEXT,
+            contact_email VARCHAR(100),
+            phone VARCHAR(50),
+            status company_status DEFAULT 'Active',
+            date_registered TIMESTAMP NOT NULL DEFAULT NOW(),
+            last_activity_at TIMESTAMP,
+            suspension_message TEXT
+          );
+        END IF;
+      END $$;`);
+
+    // Add suspension_message column if missing
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns WHERE table_name='companies' AND column_name='suspension_message'
+        ) THEN
+          ALTER TABLE companies ADD COLUMN suspension_message TEXT;
+        END IF;
+      END $$;`);
+
+    // subscription_plans
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscription_plans (
+        id SERIAL PRIMARY KEY,
+        plan_name VARCHAR(50) UNIQUE NOT NULL,
+        max_customers INT NOT NULL,
+        max_data_transfer_gb INT DEFAULT 10,
+        price_usd DECIMAL(10,2)
+      );`);
+
+    // Ensure staff_users has company_id for multi-tenant mapping
+    await client.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns WHERE table_name='staff_users' AND column_name='company_id'
+        ) THEN
+          ALTER TABLE staff_users ADD COLUMN company_id INT REFERENCES companies(id) ON DELETE SET NULL;
+        END IF;
+      END $$;`);
+
+    // company_licenses
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS company_licenses (
+        id SERIAL PRIMARY KEY,
+        company_id INT REFERENCES companies(id) ON DELETE CASCADE,
+        license_code VARCHAR(12) UNIQUE NOT NULL,
+        plan_id INT REFERENCES subscription_plans(id),
+        udo_reference_string VARCHAR(255),
+        start_date DATE NOT NULL,
+        expiry_date DATE NOT NULL,
+        is_paid BOOLEAN DEFAULT TRUE
+      );`);
+
+    // system_instances
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS system_instances (
+        id SERIAL PRIMARY KEY,
+        company_id INT UNIQUE REFERENCES companies(id) ON DELETE CASCADE,
+        platform_version VARCHAR(20) NOT NULL,
+        db_status db_health DEFAULT 'Healthy',
+        server_uptime_hours INT,
+        current_transfer_gb DECIMAL(10,2) DEFAULT 0.00,
+        last_health_check TIMESTAMP
+      );`);
+
+    // admin_audit_logs
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS admin_audit_logs (
+        id SERIAL PRIMARY KEY,
+        admin_user_id INT NOT NULL,
+        company_id INT REFERENCES companies(id) ON DELETE SET NULL,
+        action_type VARCHAR(100) NOT NULL,
+        details TEXT,
+        timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+      );`);
+
+    // user_activity_logs (monitoring)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_activity_logs (
+        id SERIAL PRIMARY KEY,
+        company_id INT REFERENCES companies(id) ON DELETE CASCADE,
+        user_id INT,
+        action_type VARCHAR(50),
+        timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+        ip_address VARCHAR(50),
+        latitude DECIMAL(10,8),
+        longitude DECIMAL(11,8)
+      );`);
+
+    // Seed plans
+    await client.query(`INSERT INTO subscription_plans (plan_name, max_customers, max_data_transfer_gb, price_usd)
+      VALUES 
+        ('Basic', 500, 10, 19.00),
+        ('Pro', 2000, 50, 49.00),
+        ('Demo', 100, 5, 0.00)
+      ON CONFLICT (plan_name) DO NOTHING;`);
+
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('ensureControlCenterSchema failed:', e);
+  } finally {
+    client.release();
+  }
+}
+
+ensureControlCenterSchema().catch(() => {});
+
+// Utility: development-only localhost override (Riyadh) for IP geolocation
+function getLocalhostOverrideCoords(ip) {
+  if (ip === '::1' || ip === '127.0.0.1') {
+    // Riyadh (approx. Olaya District)
+    return { lat: 24.7011, lon: 46.6835, isOverride: true };
+  }
+  return null;
+}
+
+// Utility: development-only mock IP injection for localhost
+function getDevMockIp(ip) {
+  const env = (process.env.NODE_ENV || '').toLowerCase();
+  if (env !== 'production' && (ip === '::1' || ip === '127.0.0.1')) {
+    // Prefer IPv4 for broader API compatibility; adjust here if you want IPv6 instead
+    return '120.61.4.83';
+    // Alternative IPv6 the user provided: '2001:4860:7:405::d4'
+  }
+  return null;
+}
+
+// Utility: best-effort IP geolocation enrichment for missing coordinates
+async function enrichLocationData(logEntry) {
+  try {
+    if (!logEntry || !logEntry.id || !logEntry.ip_address) return;
+    const originalIp = String(logEntry.ip_address || '').trim();
+    if (!originalIp) return;
+    const mockedIp = getDevMockIp(originalIp);
+    const ip = mockedIp || originalIp;
+    // If still localhost (no mock applied), use Riyadh override to avoid failed lookups
+    const override = getLocalhostOverrideCoords(ip);
+    if (override) {
+      const { rows } = await pool.query(
+        `UPDATE user_activity_logs SET latitude=$1, longitude=$2 WHERE id=$3 AND (latitude IS NULL OR longitude IS NULL) RETURNING id`,
+        [override.lat, override.lon, logEntry.id]
+      );
+      if (rows.length) {
+        console.log('[Enrich] Localhost override applied', { id: logEntry.id, ip, lat: override.lat, lon: override.lon });
+        return;
+      }
+      return;
     }
+    const url = `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=lat,lon`;
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => null);
+    const lat = data && typeof data.lat === 'number' ? data.lat : null;
+    const lon = data && typeof data.lon === 'number' ? data.lon : null;
+    if (lat == null || lon == null) return;
+    await pool.query(
+      `UPDATE user_activity_logs SET latitude=$1, longitude=$2 WHERE id=$3 AND (latitude IS NULL OR longitude IS NULL)`,
+      [lat, lon, logEntry.id]
+    );
+    console.log('[Enrich] IP geolocation applied', { id: logEntry.id, ip, lat, lon });
+  } catch (e) {
+    console.warn('[Enrich] failed', e && e.message);
+  }
+}
+
+async function generateSecureLicenseCode(companyId, platformId, maxCustomers) {
+  const input = `${companyId}:${platformId || 'NA'}:${maxCustomers || 0}:${LICENSE_SALT}:${Date.now()}`;
+  const hash = crypto.createHash('sha256').update(input).digest('hex');
+  const secureCode = hash.substring(0, 12).toUpperCase();
+  return secureCode;
+}
+
+// Staff location logging (Master/Operator) — records latest LOGIN location
+app.post('/api/v1/activity/location', requireStaff, async (req, res) => {
+  try {
+    const usr = req.session.user;
+    if (!usr) return res.status(401).json({ error: 'No session' });
+    const companyId = usr.companyId || null;
+    if (!companyId) return res.status(400).json({ error: 'No company bound to user' });
+    const { lat, lng, action } = req.body || {};
+    const hasLat = lat !== null && lat !== undefined && lat !== '';
+    const hasLng = lng !== null && lng !== undefined && lng !== '';
+    let latitude = null, longitude = null, hasCoords = false;
+    if (hasLat && hasLng) {
+      const la = Number(lat);
+      const lo = Number(lng);
+      if (Number.isFinite(la) && Number.isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180) {
+        latitude = la;
+        longitude = lo;
+        hasCoords = true;
+      }
+    }
+    // best-effort IP capture (with dev mock for localhost)
+    const ipRaw = (req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || '').toString();
+    const ip = getDevMockIp(ipRaw) || ipRaw;
+    console.log('[Activity] incoming', {
+      body: { lat, lng, action },
+      parsed: { hasCoords, latitude, longitude },
+      userId: usr.uid,
+      companyId,
+      ip
+    });
+    if (hasCoords) {
+      // Update latest LOGIN row with precise coords, or insert a new LOGIN if none exists
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const { rows: updated } = await client.query(`
+          WITH last_row AS (
+            SELECT id FROM user_activity_logs
+            WHERE company_id = $1 AND user_id = $2 AND action_type = 'LOGIN'
+            ORDER BY timestamp DESC, id DESC
+            LIMIT 1
+          )
+          UPDATE user_activity_logs u
+          SET latitude = $3, longitude = $4, ip_address = COALESCE($5, u.ip_address)
+          FROM last_row
+          WHERE u.id = last_row.id
+          RETURNING u.id;
+        `, [companyId, usr.uid, latitude, longitude, ip]);
+
+        if (!updated.length) {
+          await client.query(
+            `INSERT INTO user_activity_logs (company_id, user_id, action_type, ip_address, latitude, longitude)
+             VALUES ($1,$2,'LOGIN',$3,$4,$5)`,
+            [companyId, usr.uid, ip, latitude, longitude]
+          );
+          console.log('[Activity] inserted precise coords row', { userId: usr.uid, companyId, latitude, longitude });
+        }
+        if (updated.length) console.log('[Activity] updated latest LOGIN row with coords', { updatedId: updated[0].id, userId: usr.uid, companyId, latitude, longitude });
+        await client.query('COMMIT');
+      } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+      } finally {
+        client.release();
+      }
+    } else {
+      // No valid coords: record a LOCATION_DENIED/FAILED event without touching coords
+      try {
+        // First try to update the latest activity row of any type for this user
+        const { rows: upd } = await pool.query(
+          `WITH last_row AS (
+             SELECT id, ip_address, latitude, longitude
+             FROM user_activity_logs
+             WHERE company_id = $1 AND user_id = $2
+             ORDER BY timestamp DESC, id DESC
+             LIMIT 1
+           )
+           UPDATE user_activity_logs u
+           SET ip_address = COALESCE($3, u.ip_address)
+           FROM last_row
+           WHERE u.id = last_row.id
+           RETURNING u.id, COALESCE($3, last_row.ip_address) AS ip_address, last_row.latitude, last_row.longitude`,
+          [companyId, usr.uid, ip]
+        );
+        if (upd && upd.length) {
+          console.log('[Activity] updated latest row without coords', { userId: usr.uid, companyId, ip });
+          const row = upd[0];
+          if (row && (row.latitude == null || row.longitude == null)) {
+            setImmediate(() => enrichLocationData({ id: row.id, ip_address: row.ip_address }).catch(() => {}));
+          }
+        } else {
+          const { rows: ins } = await pool.query(
+            `INSERT INTO user_activity_logs (company_id, user_id, action_type, ip_address)
+             VALUES ($1,$2,$3,$4)
+             RETURNING id, ip_address`,
+            [companyId, usr.uid, (action || 'LOCATION_DENIED'), ip]
+          );
+          console.log('[Activity] logged without coords (new row)', { action: (action || 'LOCATION_DENIED'), userId: usr.uid, companyId, ip });
+          if (ins && ins[0] && ins[0].id) {
+            setImmediate(() => enrichLocationData({ id: ins[0].id, ip_address: ins[0].ip_address }).catch(() => {}));
+          }
+        }
+      } catch (_) {}
+    }
+    try { await pool.query('UPDATE companies SET last_activity_at = NOW() WHERE id = $1', [companyId]); } catch(_){}
+    res.json({ status: 'ok' });
+  } catch (e) {
+    console.error('Record location failed:', e);
+    res.status(500).json({ error: 'Failed to record location' });
+  }
+});
+
+// Latest Master login location per Active company for Global Monitoring
+app.get('/api/v1/all-company-locations', requireSuperAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      WITH latest_master AS (
+        SELECT DISTINCT ON (ual.company_id)
+          ual.company_id,
+          ual.user_id,
+          ual.latitude,
+          ual.longitude,
+          ual.timestamp
+        FROM user_activity_logs ual
+        JOIN staff_users su ON su.id = ual.user_id AND su.role = 'master'
+        WHERE ual.latitude IS NOT NULL AND ual.longitude IS NOT NULL
+        ORDER BY ual.company_id, ual.timestamp DESC
+      )
+      SELECT
+        c.id AS company_id,
+        c.company_name,
+        sp.plan_name,
+        latest_master.latitude AS lat,
+        latest_master.longitude AS lng,
+        latest_master.timestamp AS last_login
+      FROM companies c
+      LEFT JOIN company_licenses cl ON cl.company_id = c.id
+      LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id
+      LEFT JOIN latest_master ON latest_master.company_id = c.id
+      WHERE c.status = 'Active'
+      ORDER BY c.company_name ASC
+    `);
+    res.json(rows.map(r => ({
+      company_id: r.company_id,
+      company_name: r.company_name,
+      plan_name: r.plan_name || null,
+      lat: r.lat != null ? Number(r.lat) : null,
+      lng: r.lng != null ? Number(r.lng) : null,
+      last_login: r.last_login || null
+    })));
+  } catch (e) {
+    console.error('Fetch all-company-locations failed:', e);
+    res.status(500).json({ error: 'Failed to fetch global locations' });
+  }
+});
+
+// Aliases using "manage" path as requested, redirecting to the canonical routes
+app.get('/admin/control-center/manage/:companyId', requireSuperAdmin, (req, res) => {
+  const id = Number(req.params.companyId);
+  return res.redirect(`/admin/control-center/company/${id}`);
+});
+
+// --- System Health Helpers ---
+const HEALTH_DEFAULT_TIMEOUT_MS = 3000;
+const meterApiHealthUrl = process.env.METER_API_HEALTH_URL || process.env.METER_API_BASE;
+const jobsHealthUrl = process.env.JOBS_HEALTH_URL; // optional
+
+const timeoutFetch = async (url, timeoutMs = HEALTH_DEFAULT_TIMEOUT_MS) => {
+  if (!url) throw new Error('Health URL not configured');
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal, method: 'GET' });
+    return { ok: res.ok, status: res.status };
+  } finally {
+    clearTimeout(id);
+  }
+};
+
+const mapByLatency = (ok, ms) => {
+  if (!ok) return 'down';
+  if (ms < 300) return 'healthy';
+  if (ms < 1000) return 'operational';
+  return 'degraded';
+};
+
+// --- New Health Checks ---
+async function checkDisk() {
+  const start = Date.now();
+  try {
+    if (process.platform === 'win32') {
+      const drive = (process.env.SystemDrive || 'C:').replace(/\\$/,'');
+      const cmd = `wmic logicaldisk where DeviceID='${drive}' get FreeSpace,Size /format:value`;
+      const { free, size } = await new Promise((resolve, reject) => {
+        exec(cmd, { windowsHide: true }, (err, stdout) => {
+          if (err) return reject(err);
+          const mFree = stdout.match(/FreeSpace=(\d+)/i);
+          const mSize = stdout.match(/Size=(\d+)/i);
+          if (!mFree || !mSize) return reject(new Error('WMIC parse error'));
+          resolve({ free: Number(mFree[1]), size: Number(mSize[1]) });
+        });
+      });
+      const pct = size ? (free / size) * 100 : 0;
+      const status = pct < 10 ? 'down' : pct < 20 ? 'degraded' : 'healthy';
+      return { status, latency: Date.now() - start, message: `free=${pct.toFixed(1)}%` };
+    } else {
+      const { pct } = await new Promise((resolve, reject) => {
+        exec('df -k .', (err, stdout) => {
+          if (err) return reject(err);
+          const lines = stdout.trim().split(/\r?\n/);
+          const parts = lines[lines.length-1].split(/\s+/);
+          const usedPctStr = parts[4] || '';
+          const usedPct = Number(usedPctStr.replace('%','')) || 0;
+          const freePct = 100 - usedPct;
+          resolve({ pct: freePct });
+        });
+      });
+      const status = pct < 10 ? 'down' : pct < 20 ? 'degraded' : 'healthy';
+      return { status, latency: Date.now() - start, message: `free=${pct.toFixed(1)}%` };
+    }
+  } catch (e) {
+    return { status: 'unknown', latency: null, message: e.message };
+  }
+}
+
+// --- Customer-friendly Health Aggregation ---
+async function checkBillEngine() {
+  const start = Date.now();
+  try {
+    const { PDFDocument } = require('pdf-lib');
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.addPage([200, 100]);
+    const bytes = await pdfDoc.save();
+    const ok = bytes && bytes.length > 0;
+    return { ok, ms: Date.now() - start };
+  } catch (e) {
+    return { ok: false, ms: null, err: e.message };
+  }
+}
+
+async function getCustomerHealth() {
+  const [db, disk, proc, clock, tls, bill] = await Promise.allSettled([
+    checkDb(),
+    checkDisk(),
+    checkProcess(),
+    checkClock(),
+    checkTlsCert(),
+    checkBillEngine()
+  ]);
+
+  const pick = (res, def) => (res.status === 'fulfilled' ? res.value : def);
+  const dbR = pick(db, { status: 'unknown' });
+  const diskR = pick(disk, { status: 'unknown', message: '' });
+  const procR = pick(proc, { status: 'unknown', message: '' });
+  const clockR = pick(clock, { status: 'unknown' });
+  const tlsR = pick(tls, { status: 'unknown', message: '' });
+  const billR = pick(bill, { ok: false, ms: null });
+
+  // Core Service: DB healthy/operational AND process not down
+  const coreOk = (dbR.status === 'healthy' || dbR.status === 'operational') && procR.status !== 'down';
+  const core = coreOk ? 'healthy' : (procR.status === 'down' || dbR.status === 'down') ? 'down' : 'degraded';
+
+  // CSV Storage: map disk free% thresholds already encoded in diskR.status
+  const csv = diskR.status || 'unknown';
+
+  // Bill Engine: successful quick PDF render
+  const billStatus = billR.ok ? 'operational' : 'down';
+
+  // Pending Jobs: if jobs_heartbeat exists we can’t infer pending; default 0 for this SKU
+  const pendingJobs = 0;
+
+  // Avg Processing Time: use bill engine + db latency as proxy
+  const avgMs = ((billR.ms || 0) + (typeof dbR.latency === 'number' ? dbR.latency : 0)) || 0;
+  const avgLabel = avgMs < 10000 ? '< 10 seconds' : '≥ 10 seconds';
+
+  // Security: TLS cert not down and clock drift small
+  const sec = (tlsR.status !== 'down' && clockR.status !== 'down') ? 'secure' : 'attention';
+
+  return {
+    core_service: { status: core },
+    csv_storage: { status: csv },
+    bill_engine: { status: billStatus },
+    pending_jobs: { status: pendingJobs === 0 ? 'healthy' : 'degraded', value: pendingJobs },
+    avg_processing: { status: avgMs < 10000 ? 'healthy' : 'degraded', label: avgLabel },
+    security: { status: sec }
+  };
+}
+
+app.get('/api/customer-health', requireStaff, async (req, res) => {
+  try {
+    const data = await getCustomerHealth();
+    res.json({ status: 'success', data });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: e.message });
+  }
+});
+
+async function sampleCpuPercent(durationMs = 300) {
+  const cores = os.cpus().length || 1;
+  const startUsage = process.cpuUsage();
+  const start = Date.now();
+  await new Promise(r => setTimeout(r, durationMs));
+  const elap = Date.now() - start;
+  const usage = process.cpuUsage(startUsage);
+  const totalMicros = usage.user + usage.system;
+  const percent = (totalMicros / 1000) / (elap * cores) * 100;
+  return Math.max(0, Math.min(100, percent));
+}
+
+async function checkProcess() {
+  try {
+    const rss = process.memoryUsage().rss;
+    const totalMem = os.totalmem() || 1;
+    const memPct = (rss / totalMem) * 100;
+    const cpuPct = await sampleCpuPercent(300);
+    const worst = Math.max(memPct, cpuPct);
+    const status = worst >= 90 ? 'down' : worst >= 70 ? 'degraded' : 'healthy';
+    const msg = `rss=${(rss/1024/1024).toFixed(0)}MB, mem=${memPct.toFixed(1)}%, cpu=${cpuPct.toFixed(1)}%`;
+    return { status, latency: 300, message: msg };
+  } catch (e) {
+    return { status: 'unknown', latency: null, message: e.message };
+  }
+}
+
+async function checkClock() {
+  const start = Date.now();
+  try {
+    const resp = await fetch('https://worldtimeapi.org/api/ip');
+    const ms = Date.now() - start;
+    if (!resp.ok) return { status: 'unknown', latency: ms, message: `HTTP ${resp.status}` };
+    const data = await resp.json();
+    const serverSec = Date.now() / 1000;
+    const apiSec = (data.unixtime != null) ? Number(data.unixtime) : (new Date(data.datetime)).getTime()/1000;
+    const drift = Math.abs(serverSec - apiSec);
+    const status = drift >= 10 ? 'down' : drift >= 2 ? 'degraded' : 'healthy';
+    return { status, latency: ms, message: `drift=${drift.toFixed(2)}s` };
+  } catch (e) {
+    return { status: 'unknown', latency: null, message: e.message };
+  }
+}
+
+async function checkTlsCert() {
+  const start = Date.now();
+  const hostEnv = process.env.TLS_CHECK_HOST; // e.g. mydomain.com:443
+  if (!hostEnv) return { status: 'unknown', latency: null, message: 'TLS_CHECK_HOST not set' };
+  try {
+    const [host, portStr] = hostEnv.split(':');
+    const port = Number(portStr || 443);
+    const daysLeft = await new Promise((resolve, reject) => {
+      const sock = tls.connect({ host, port, servername: host, rejectUnauthorized: false }, () => {
+        try {
+          const cert = sock.getPeerCertificate();
+          sock.end();
+          if (!cert || !cert.valid_to) return reject(new Error('No certificate'));
+          const validTo = new Date(cert.valid_to).getTime();
+          const days = Math.floor((validTo - Date.now()) / (1000*60*60*24));
+          resolve(days);
+        } catch (e) { reject(e); }
+      });
+      sock.on('error', reject);
+    });
+    const status = daysLeft <= 0 ? 'down' : daysLeft < 15 ? 'degraded' : 'healthy';
+    return { status, latency: Date.now() - start, message: `expires_in=${daysLeft}d` };
+  } catch (e) {
+    return { status: 'unknown', latency: null, message: e.message };
+  }
+}
+
+async function upsertHealth(service_key, status, latency_ms, message) {
+  await pool.query(
+    `INSERT INTO system_health(service_key, status, latency_ms, message, checked_at)
+     VALUES ($1,$2,$3,$4, NOW())
+     ON CONFLICT (service_key)
+     DO UPDATE SET status=EXCLUDED.status, latency_ms=EXCLUDED.latency_ms, message=EXCLUDED.message, checked_at=EXCLUDED.checked_at`,
+    [service_key, status, latency_ms ?? null, message ?? null]
+  );
+  // Also optionally record history if table exists
+  try {
+    await pool.query(
+      `INSERT INTO system_health_history(service_key, status, latency_ms, message, checked_at)
+       VALUES ($1,$2,$3,$4, NOW())`,
+      [service_key, status, latency_ms ?? null, message ?? null]
+    );
+  } catch (_) { /* history table optional */ }
+}
+
+async function checkDb() {
+  const start = Date.now();
+  try {
+    await pool.query('SELECT 1');
+    const ms = Date.now() - start;
+    return { status: mapByLatency(true, ms), latency: ms, message: 'OK' };
+  } catch (e) {
+    return { status: 'down', latency: null, message: e.message };
+  }
+}
+
+async function checkMeterApi() {
+  const start = Date.now();
+  try {
+    const res = await timeoutFetch(meterApiHealthUrl, HEALTH_DEFAULT_TIMEOUT_MS);
+    const ms = Date.now() - start;
+    return { status: mapByLatency(res.ok, ms), latency: ms, message: `HTTP ${res.status}` };
+  } catch (e) {
+    return { status: 'down', latency: null, message: e.message };
+  }
+}
+
+// Ensure heartbeat table exists
+async function ensureJobsHeartbeatTable() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS jobs_heartbeat (
+      id smallint PRIMARY KEY DEFAULT 1,
+      last_beat timestamptz NOT NULL DEFAULT NOW()
+    );`);
+    await pool.query(`INSERT INTO jobs_heartbeat (id) VALUES (1) ON CONFLICT (id) DO NOTHING;`);
+  } catch (_) {}
+}
+
+async function updateJobsHeartbeat() {
+  await ensureJobsHeartbeatTable();
+  await pool.query('UPDATE jobs_heartbeat SET last_beat = NOW() WHERE id = 1');
+}
+
+async function checkJobs() {
+  await ensureJobsHeartbeatTable();
+  try {
+    const { rows } = await pool.query('SELECT last_beat FROM jobs_heartbeat WHERE id = 1');
+    if (!rows.length) return { status: 'unknown', latency: null, message: 'No heartbeat' };
+    const last = new Date(rows[0].last_beat).getTime();
+    const now = Date.now();
+    const diffMs = now - last;
+    let status = 'down';
+    if (diffMs < 2 * 60 * 1000) status = 'healthy';
+    else if (diffMs < 10 * 60 * 1000) status = 'degraded';
+    else status = 'down';
+    return { status, latency: diffMs, message: `last beat ${Math.round(diffMs/1000)}s ago` };
+  } catch (e) {
+    return { status: 'down', latency: null, message: e.message };
+  }
+}
+
+async function checkMail() {
+  const nodemailer = require('nodemailer');
+  if (!process.env.SMTP_HOST) return { status: 'unknown', latency: null, message: 'SMTP not configured' };
+  const start = Date.now();
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      secure: String(process.env.SMTP_SECURE || 'false') === 'true',
+      auth: (process.env.SMTP_USER && process.env.SMTP_PASS) ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+      connectionTimeout: HEALTH_DEFAULT_TIMEOUT_MS,
+      greetingTimeout: HEALTH_DEFAULT_TIMEOUT_MS,
+      socketTimeout: HEALTH_DEFAULT_TIMEOUT_MS
+    });
+    await transporter.verify();
+    const ms = Date.now() - start;
+    return { status: mapByLatency(true, ms), latency: ms, message: 'SMTP OK' };
+  } catch (e) {
+    return { status: 'down', latency: null, message: e.message };
+  }
+}
+
+function buildSmtpTransporter() {
+  const nodemailer = require('nodemailer');
+  if (!process.env.SMTP_HOST) return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: String(process.env.SMTP_SECURE || 'false') === 'true',
+    auth: (process.env.SMTP_USER && process.env.SMTP_PASS) ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+    connectionTimeout: HEALTH_DEFAULT_TIMEOUT_MS,
+    greetingTimeout: HEALTH_DEFAULT_TIMEOUT_MS,
+    socketTimeout: HEALTH_DEFAULT_TIMEOUT_MS
+  });
+}
+
+async function runAllHealthChecks() {
+  const results = await Promise.allSettled([
+    checkDb().then(r => ({ key: 'db', ...r })),
+    checkDisk().then(r => ({ key: 'disk', ...r })),
+    checkProcess().then(r => ({ key: 'process', ...r })),
+    checkClock().then(r => ({ key: 'clock', ...r })),
+    checkTlsCert().then(r => ({ key: 'tls_cert', ...r })),
+  ]);
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      const { key, status, latency, message } = r.value;
+      await upsertHealth(key, status, latency, message);
+    }
+  }
+}
+
+// Kick off scheduler (every 5 minutes)
+setInterval(() => { runAllHealthChecks().catch(() => {}); }, 5 * 60 * 1000);
+// Do an initial run shortly after boot
+setTimeout(() => { runAllHealthChecks().catch(() => {}); }, 3000);
+
+// Expose an endpoint your scheduler (or a simple cron) can call to update heartbeat
+app.post('/api/jobs/heartbeat', requireStaff, async (req, res) => {
+  try {
+    await updateJobsHeartbeat();
+    res.json({ status: 'success' });
+  } catch (e) {
+    res.status(500).json({ status: 'error', message: e.message });
+  }
+});
+
+// --- ADDED --- (Step 3: Create middleware to load settings for Admin pages)
+const loadCompanySettings = async (req, res, next) => {
+    // We attach settings to res.locals, which are automatically available in EJS templates
+    res.locals.companyLogoUrl = null; // Set a default
+    let client;
+    try {
+        client = await pool.connect();
+        // Fetch the logo_url from the company_settings table
+        const result = await client.query("SELECT logo_url FROM company_settings WHERE id = 1");
+        
+        if (result.rows.length > 0) {
+            // If we find a logo, make it available to the EJS template
+            res.locals.companyLogoUrl = result.rows[0].logo_url;
+        }
+    } catch (err) {
+        // Log the error but don't block the request
+        console.error("Failed to load company settings for sidebar:", err);
+    } finally {
+        if (client) {
+            client.release();
+        }
+    }
+    // Continue to the next middleware (requireAdmin) or the route handler
     next();
 };
 
-// Middleware to ensure user is a logged-in Customer
-const requireCustomer = (req, res, next) => {
-    if (!req.session.user || req.session.user.role !== 'customer') {
-        // If not a customer, deny access.
-        return res.status(403).send('<h1>403 Forbidden</h1><p>You do not have permission to access this page.</p>');
-    }
-    next();
-};
 
 // Shared demo invoices data (used by /billing and /receipt)
 const invoicesData = [
@@ -120,44 +851,62 @@ const invoicesData = [
 // UPDATED: Root route now redirects based on the user's role if a session exists
 app.get('/', (req, res) => {
   if (req.session.user) {
-    if (req.session.user.role === 'admin') {
+    if (['admin', 'operator', 'superadmin'].includes(req.session.user.role)) {
       return res.redirect('/admin/home');
     }
-    // Default to customer home for any other role
     return res.redirect('/home');
   }
-  // If no session, show the login page
   res.render('Customer/login', { error: null });
 });
 
 
 // UPDATED: Login route now assigns roles and redirects
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
+  try {
+    const { rows } = await pool.query('SELECT id, username, password_hash, role, is_active, company_id FROM staff_users WHERE username=$1 LIMIT 1', [username]);
+    if (rows.length && rows[0].is_active !== false) {
+      const u = rows[0];
+      const ok = await bcrypt.compare(password, u.password_hash);
+      if (ok) {
+        const sessionRole = (u.role === 'master') ? 'admin' : 'operator';
+        req.session.user = { name: u.username, uid: u.id, role: sessionRole, companyId: u.company_id || null };
+        if (u.company_id) {
+          try { await pool.query('UPDATE companies SET last_activity_at = NOW() WHERE id = $1', [u.company_id]); } catch(_){ }
+          try {
+            const ipRaw = (req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || '').toString();
+            const ip = getDevMockIp(ipRaw) || ipRaw;
+            const { rows: ins } = await pool.query(
+              `INSERT INTO user_activity_logs (company_id, user_id, action_type, ip_address, latitude, longitude)
+               VALUES ($1,$2,'LOGIN',$3,NULL,NULL)
+               RETURNING id, ip_address`,
+              [u.company_id, u.id, ip]
+            );
+            if (ins && ins[0] && ins[0].id) {
+              setImmediate(() => enrichLocationData({ id: ins[0].id, ip_address: ins[0].ip_address }).catch(() => {}));
+            }
+          } catch(_){ }
+        }
+        return res.redirect('/admin/home');
+      }
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+  }
 
-  // --- Check for Admin credentials ---
+  // Super Admin fallback login (not visible in UI)
   if (username === 'admin_demo' && password === 'Demo@123') {
-    req.session.user = {
-      name: 'Admin User Demo',
-      uid: 'demo_admin_01',
-      role: 'admin' // Assign 'admin' role
-    };
-    // Redirect to the dedicated admin home route
+    req.session.user = { name: 'Super Admin', uid: 0, role: 'superadmin' };
     return res.redirect('/admin/home');
   }
 
-  // --- Check for Customer credentials ---
+  // Optional demo customer login retained
   if (username === 'customer_demo' && password === 'Demo@123') {
-    req.session.user = {
-      name: 'Customer User Demo',
-      uid: 1,
-      role: 'customer' // Assign 'customer' role
-    };
+    req.session.user = { name: 'Customer User Demo', uid: 1, role: 'customer' };
     return res.redirect('/home');
   }
 
-  // --- Fallback for failed login ---
-  res.render('Customer/login', { error: 'Invalid username or password. Please try again.' });
+  return res.render('Customer/login', { error: 'Invalid username or password. Please try again.' });
 });
 
 // Logout Route - works for both roles
@@ -171,14 +920,17 @@ app.get('/logout', (req, res) => {
   });
 });
 
+// --- REVA LITEBILL ROUTES ---
+const liteBillRoutes = require('./backend.js');
+app.use('/', liteBillRoutes);
 
 //---------------------------------------------------------------------------------------//
-
+app.use('/admin', loadCompanySettings, requireStaff);
 
 // --- NEW: Admin Routes ---
 // All routes for the admin panel should be placed here and use `requireAdmin`
 
-app.get('/admin/home', requireAdmin, (req, res) => {
+app.get('/admin/home', requireStaff, (req, res) => {
     // This page is now protected and only accessible by admins
     res.render('Admin/home_ad', {
         user: req.session.user,
@@ -187,7 +939,7 @@ app.get('/admin/home', requireAdmin, (req, res) => {
 });
 
 
-app.get('/admin/customer_management', requireAdmin, (req, res) => {
+app.get('/admin/customer_management', requireStaff, (req, res) => {
     // This page is now protected and only accessible by admins
     res.render('Admin/customer_management', {
         user: req.session.user,
@@ -195,7 +947,7 @@ app.get('/admin/customer_management', requireAdmin, (req, res) => {
     });
 });
 
-app.get('/admin/meter_management', requireAdmin, (req, res) => {
+app.get('/admin/meter_management', requireStaff, (req, res) => {
     // This page is now protected and only accessible by admins
     res.render('Admin/meter_management', {
         user: req.session.user,
@@ -203,7 +955,7 @@ app.get('/admin/meter_management', requireAdmin, (req, res) => {
     });
 });
 
-app.get('/admin/billing_finance', requireAdmin, (req, res) => {
+app.get('/admin/billing_finance', requireStaff, (req, res) => {
     // This page is now protected and only accessible by admins
     res.render('Admin/billing_finance', {
         user: req.session.user,
@@ -211,7 +963,7 @@ app.get('/admin/billing_finance', requireAdmin, (req, res) => {
     });
 });
 
-app.get('/admin/analytics_reports', requireAdmin, (req, res) => {
+app.get('/admin/analytics_reports', requireStaff, (req, res) => {
     // This page is now protected and only accessible by admins
     res.render('Admin/analytics_reports', {
         user: req.session.user,
@@ -219,7 +971,7 @@ app.get('/admin/analytics_reports', requireAdmin, (req, res) => {
     });
 });
 
-app.get('/admin/dashboards', requireAdmin, (req, res) => {
+app.get('/admin/dashboards', requireStaff, (req, res) => {
     // This page is now protected and only accessible by admins
     res.render('Admin/dashboards', {
         user: req.session.user,
@@ -227,19 +979,39 @@ app.get('/admin/dashboards', requireAdmin, (req, res) => {
     });
 });
 
-app.get('/admin/settings', requireAdmin, (req, res) => {
-    // This page is now protected and only accessible by admins
-    res.render('Admin/settings', {
-        user: req.session.user,
-        activePage: 'settings'
-    });
+app.get('/admin/settings', requireStaff, async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT id, username, role, is_active FROM staff_users ORDER BY role');
+        res.render('Admin/settings', {
+            user: req.session.user,
+            activePage: 'settings',
+            staffUsers: rows,
+            currentTab: req.query.tab || null
+        });
+    } catch (e) {
+        console.error('Error loading staff users for settings:', e);
+        res.render('Admin/settings', {
+            user: req.session.user,
+            activePage: 'settings',
+            staffUsers: [],
+            currentTab: req.query.tab || null
+        });
+    }
 });
 
-app.get('/admin/support_center', requireAdmin, (req, res) => {
+app.get('/admin/support_center', requireStaff, (req, res) => {
     // This page is now protected and only accessible by admins
     res.render('Admin/support_center', {
         user: req.session.user,
         activePage: 'support_center'
+    });
+});
+
+app.get('/admin/reva_lite_bill', requireStaff, (req, res) => {
+    // This page is now protected and only accessible by admins
+    res.render('Admin/reva_lite_bill', {
+        user: req.session.user,
+        activePage: 'reva_lite_bill'
     });
 });
 
@@ -249,7 +1021,258 @@ app.get('/admin/support_center', requireAdmin, (req, res) => {
 
 
 
+// --- Super Admin: Control Center ---
+app.get('/admin/control-center', requireSuperAdmin, async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT c.id, c.company_name, c.status, c.last_activity_at,
+             sp.plan_name, sp.max_customers,
+             si.platform_version
+      FROM companies c
+      LEFT JOIN company_licenses cl ON cl.company_id = c.id
+      LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id
+      LEFT JOIN system_instances si ON si.company_id = c.id
+      ORDER BY c.company_name ASC`);
+    res.render('Admin/control_center', { user: req.session.user, activePage: 'control_center', companies: rows, mapsApiKey: process.env.GOOGLE_MAPS_API_KEY || null });
+  } catch (e) {
+    console.error('Control Center list failed:', e);
+    res.status(500).send('Failed to load Control Center');
+  }
+});
+
+app.get('/admin/control-center/company/:id', requireSuperAdmin, async (req, res) => {
+  const companyId = Number(req.params.id);
+  try {
+    const [c, lic, plans, inst] = await Promise.all([
+      pool.query('SELECT * FROM companies WHERE id=$1 LIMIT 1', [companyId]),
+      pool.query(`SELECT cl.*, sp.plan_name, sp.max_data_transfer_gb FROM company_licenses cl LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id WHERE company_id=$1 LIMIT 1`, [companyId]),
+      pool.query('SELECT id, plan_name FROM subscription_plans ORDER BY id'),
+      pool.query('SELECT * FROM system_instances WHERE company_id=$1 LIMIT 1', [companyId])
+    ]);
+    if (!c.rows.length) return res.status(404).send('Company not found');
+    res.render('Admin/company_detail', {
+      user: req.session.user,
+      activePage: 'control_center',
+      company: c.rows[0],
+      license: lic.rows[0] || null,
+      plans: plans.rows,
+      instance: inst.rows[0] || null,
+      planLimitGb: (lic.rows[0] && lic.rows[0].max_data_transfer_gb) ? Number(lic.rows[0].max_data_transfer_gb) : null,
+      mapsApiKey: process.env.GOOGLE_MAPS_API_KEY || null
+    });
+  } catch (e) {
+    console.error('Company detail failed:', e);
+    res.status(500).send('Failed to load Company');
+  }
+});
+
+// Latest login locations per user for a company (Master/Operator users)
+app.get('/api/v1/user-locations/:companyId', requireSuperAdmin, async (req, res) => {
+  const companyId = Number(req.params.companyId);
+  try {
+    const { rows } = await pool.query(`
+      WITH latest AS (
+        SELECT DISTINCT ON (ual.user_id)
+          ual.id, ual.user_id, ual.latitude, ual.longitude, ual.timestamp, ual.ip_address
+        FROM user_activity_logs ual
+        WHERE ual.company_id = $1
+        ORDER BY ual.user_id, ual.timestamp DESC
+      )
+      SELECT
+        CASE
+          WHEN su.role = 'master' THEN 'Master'
+          WHEN su.role = 'operator' THEN 'Operator'
+          ELSE COALESCE(su.role, 'User')
+        END AS user_role,
+        su.username AS username,
+        latest.latitude AS lat,
+        latest.longitude AS lng,
+        latest.timestamp AS last_login,
+        latest.id AS log_id,
+        latest.ip_address AS ip_address
+      FROM latest
+      LEFT JOIN staff_users su ON su.id = latest.user_id
+    `, [companyId]);
+
+    // Trigger background enrichment for any rows lacking coords but having an IP
+    rows.forEach(r => {
+      if ((r.lat == null || r.lng == null) && r.ip_address) {
+        enrichLocationData({ id: r.log_id, ip_address: r.ip_address });
+      }
+    });
+
+    // Respond immediately; client will see enriched coords on next refresh
+    res.json(rows
+      .filter(r => r.lat != null && r.lng != null)
+      .map(r => ({
+        user_role: r.user_role,
+        username: r.username,
+        lat: Number(r.lat),
+        lng: Number(r.lng),
+        last_login: r.last_login
+      }))
+    );
+  } catch (e) {
+    console.error('Fetch user locations failed:', e);
+    res.status(500).json({ error: 'Failed to fetch user locations' });
+  }
+});
+
+app.post('/admin/control-center/company/:id', requireSuperAdmin, async (req, res) => {
+  const companyId = Number(req.params.id);
+  const { company_name, reva_platform_id, address, contact_email, phone, status } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const before = await client.query('SELECT company_name, reva_platform_id, address, contact_email, phone, status FROM companies WHERE id=$1', [companyId]);
+    await client.query(`UPDATE companies SET company_name=$1, reva_platform_id=$2, address=$3, contact_email=$4, phone=$5, status=$6 WHERE id=$7`,
+      [company_name, reva_platform_id || null, address || null, contact_email || null, phone || null, status, companyId]);
+    const details = `Company updated from ${JSON.stringify(before.rows[0] || {})} to ${JSON.stringify({ company_name, reva_platform_id, address, contact_email, phone, status })}`;
+    await client.query(`INSERT INTO admin_audit_logs (admin_user_id, company_id, action_type, details) VALUES ($1,$2,'COMPANY_UPDATE',$3)`,
+      [req.session.user.uid, companyId, details]);
+    await client.query('COMMIT');
+    res.redirect(`/admin/control-center/company/${companyId}`);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('Company update failed:', e);
+    res.status(500).send('Failed to update company');
+  } finally {
+    client.release();
+  }
+});
+
+app.post('/admin/control-center/company/:id/license', requireSuperAdmin, async (req, res) => {
+  const companyId = Number(req.params.id);
+  const { license_code, udo_reference_string, plan_id, start_date, expiry_date, is_paid } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query('SELECT id FROM company_licenses WHERE company_id=$1 LIMIT 1', [companyId]);
+    let finalLicenseCode = license_code;
+    if (rows.length) {
+      await client.query(`UPDATE company_licenses SET license_code=$1, udo_reference_string=$2, plan_id=$3, start_date=$4, expiry_date=$5, is_paid=$6 WHERE company_id=$7`,
+        [license_code, udo_reference_string || null, plan_id || null, start_date, expiry_date, String(is_paid) === 'true', companyId]);
+    } else {
+      const { rows: companyRows } = await client.query('SELECT reva_platform_id FROM companies WHERE id=$1', [companyId]);
+      const { rows: planRows } = await client.query('SELECT max_customers FROM subscription_plans WHERE id=$1', [plan_id]);
+      const platformId = companyRows[0] ? companyRows[0].reva_platform_id : null;
+      const maxCustomers = planRows[0] ? planRows[0].max_customers : 500;
+      finalLicenseCode = await generateSecureLicenseCode(companyId, platformId, maxCustomers);
+      console.log('[License] Generated new secure code:', finalLicenseCode);
+
+      await client.query(`INSERT INTO company_licenses (company_id, license_code, udo_reference_string, plan_id, start_date, expiry_date, is_paid) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+        [companyId, finalLicenseCode, udo_reference_string || null, plan_id || null, start_date, expiry_date, String(is_paid) === 'true']);
+    }
+    const auditCode = rows.length ? license_code : finalLicenseCode;
+    await client.query(`INSERT INTO admin_audit_logs (admin_user_id, company_id, action_type, details) VALUES ($1,$2,'LICENSE_UPDATE',$3)`,
+      [req.session.user.uid, companyId, `License updated: code=${auditCode}, plan_id=${plan_id}, paid=${String(is_paid) === 'true'}`]);
+    await client.query('COMMIT');
+    res.redirect(`/admin/control-center/company/${companyId}`);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('License update failed:', e);
+    res.status(500).send('Failed to update license');
+  } finally {
+    client.release();
+  }
+});
+
+app.post('/admin/control-center/company/:id/suspend', requireSuperAdmin, async (req, res) => {
+  const companyId = Number(req.params.id);
+  const { message } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`UPDATE companies SET status='Suspended', suspension_message=$2 WHERE id=$1`, [companyId, message || null]);
+    await client.query(`INSERT INTO admin_audit_logs (admin_user_id, company_id, action_type, details) VALUES ($1,$2,'ACCOUNT_SUSPEND',$3)`,
+      [req.session.user.uid, companyId, message ? `Suspended with message: ${message}` : 'Suspended']);
+    await client.query('COMMIT');
+    res.redirect(`/admin/control-center/company/${companyId}`);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('Account suspend failed:', e);
+    res.status(500).send('Failed to suspend account');
+  } finally {
+    client.release();
+  }
+});
+
+app.post('/admin/control-center/company/:id/activate', requireSuperAdmin, async (req, res) => {
+  const companyId = Number(req.params.id);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`UPDATE companies SET status='Active' WHERE id=$1`, [companyId]);
+    await client.query(`INSERT INTO admin_audit_logs (admin_user_id, company_id, action_type, details) VALUES ($1,$2,'ACCOUNT_ACTIVATE',$3)`,
+      [req.session.user.uid, companyId, 'Activated account']);
+    await client.query('COMMIT');
+    res.redirect(`/admin/control-center/company/${companyId}`);
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('Account activate failed:', e);
+    res.status(500).send('Failed to activate account');
+  } finally {
+    client.release();
+  }
+});
+
+// --- System Health API ---
+app.get('/api/system-health', requireStaff, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT service_key, status, latency_ms, message, checked_at FROM system_health ORDER BY service_key');
+    res.json({ status: 'success', data: rows });
+  } catch (e) {
+    console.error('Fetch system-health failed:', e);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch system health' });
+  }
+});
+
+app.post('/api/system-health/refresh', requireStaff, async (req, res) => {
+  try {
+    await runAllHealthChecks();
+    const { rows } = await pool.query('SELECT service_key, status, latency_ms, message, checked_at FROM system_health ORDER BY service_key');
+    res.json({ status: 'success', data: rows });
+  } catch (e) {
+    console.error('Refresh system-health failed:', e);
+    res.status(500).json({ status: 'error', message: 'Failed to refresh system health' });
+  }
+});
+
+   
+   
+
+
+
 // --- PROTECTED Customer Routes ---
+// --- Admin: Users & Permissions ---
+app.get('/admin/users', requireMaster, async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT id, username, role, is_active, created_at, updated_at FROM staff_users ORDER BY role');
+        res.render('Admin/users_manage', { user: req.session.user, activePage: 'users', users: rows });
+    } catch (e) {
+        console.error('Error loading staff users:', e);
+        res.status(500).send('Failed to load users');
+    }
+});
+
+app.post('/admin/users/:role', requireMaster, async (req, res) => {
+    const role = req.params.role;
+    if (!['master', 'operator'].includes(role)) return res.status(400).send('Invalid role');
+    const { username, password } = req.body;
+    if (!username || username.trim().length < 3) return res.status(400).send('Invalid username');
+    try {
+        if (password && password.trim()) {
+            const hash = await bcrypt.hash(password.trim(), 12);
+            await pool.query('UPDATE staff_users SET username=$1, password_hash=$2, updated_at=NOW() WHERE role=$3', [username.trim(), hash, role]);
+        } else {
+            await pool.query('UPDATE staff_users SET username=$1, updated_at=NOW() WHERE role=$2', [username.trim(), role]);
+        }
+        res.redirect('/admin/settings?tab=roles');
+    } catch (e) {
+        console.error('Update staff user failed:', e);
+        res.status(500).send('Failed to update user');
+    }
+});
 // All customer routes now use `requireCustomer` for protection
 
 // Home Page Route - Odoo references removed
@@ -682,22 +1705,7 @@ app.get('/receipt/:invoiceId', async (req, res) => {
         });
 
         // NEW (FIXED) CODE:
-        const browser = await puppeteer.launch({ 
-            // This tells Puppeteer where to find the browser executable on Vercel
-            executablePath: await chromium.executablePath(),
-            
-            // Use the specific arguments required for the serverless environment
-            args: chromium.args,
-            
-            // Set headless mode using the Chromium configuration
-            headless: chromium.headless, 
-            
-            // Use the default viewport
-            defaultViewport: chromium.defaultViewport,
-            
-            // Ignore security errors, often needed in serverless function environments
-            ignoreHTTPSErrors: true,
-        });
+        const browser = await puppeteer.launch({ headless: true });
         const page = await browser.newPage();
         
         // Load the HTML content
@@ -862,23 +1870,7 @@ app.get('/reports/generate', requireCustomer, async (req, res) => {
         try {
             const htmlContent = await ejs.renderFile(templatePath, templateData);
 
-            // NEW (FIXED) CODE:
-            const browser = await puppeteer.launch({ 
-                // This tells Puppeteer where to find the browser executable on Vercel
-                executablePath: await chromium.executablePath(),
-                
-                // Use the specific arguments required for the serverless environment
-                args: chromium.args,
-                
-                // Set headless mode using the Chromium configuration
-                headless: chromium.headless, 
-                
-                // Use the default viewport
-                defaultViewport: chromium.defaultViewport,
-                
-                // Ignore security errors, often needed in serverless function environments
-                ignoreHTTPSErrors: true,
-            });
+            const browser = await puppeteer.launch({ headless: true });
             const page = await browser.newPage();
             
             await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
