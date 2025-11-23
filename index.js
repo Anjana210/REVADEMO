@@ -16,12 +16,10 @@ const session = require('express-session');
 //const puppeteer = require('puppeteer-core'); // Use the core version
 const puppeteer = require('puppeteer');
 //const chromium = require('@sparticuz/chromium'); // Use Vercel-compatible chromium 
+// Use PORT from environment (cloud platforms like Railway, Render set this)
 const port = process.env.PORT || 4000;
 const ejs = require('ejs'); 
 const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-
-const LICENSE_SALT = process.env.LICENSE_SALT || 'dev_only_replace_this_with_a_long_random_secret_for_license_hashing';
 
 const { Pool } = require('pg'); // --- ADDED --- (Step 1: Import the Pool)
 
@@ -33,10 +31,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.json({ limit: '10mb' }));
 
 app.use(session({
-  secret: 'a-secure-secret-key-for-revartix',
+  secret: process.env.SESSION_SECRET || 'a-secure-secret-key-for-revartix',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false }
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
 }));
 
 const { requireAdmin, requireCustomer, requireStaff, requireMaster, requireWrite, requireSuperAdmin } = require('./middleware.js');
@@ -99,22 +101,12 @@ async function ensureControlCenterSchema() {
         price_usd DECIMAL(10,2)
       );`);
 
-    // Ensure staff_users has company_id for multi-tenant mapping
-    await client.query(`
-      DO $$ BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns WHERE table_name='staff_users' AND column_name='company_id'
-        ) THEN
-          ALTER TABLE staff_users ADD COLUMN company_id INT REFERENCES companies(id) ON DELETE SET NULL;
-        END IF;
-      END $$;`);
-
     // company_licenses
     await client.query(`
       CREATE TABLE IF NOT EXISTS company_licenses (
         id SERIAL PRIMARY KEY,
         company_id INT REFERENCES companies(id) ON DELETE CASCADE,
-        license_code VARCHAR(12) UNIQUE NOT NULL,
+        license_code VARCHAR(10) UNIQUE NOT NULL,
         plan_id INT REFERENCES subscription_plans(id),
         udo_reference_string VARCHAR(255),
         start_date DATE NOT NULL,
@@ -176,227 +168,6 @@ async function ensureControlCenterSchema() {
 }
 
 ensureControlCenterSchema().catch(() => {});
-
-// Utility: development-only localhost override (Riyadh) for IP geolocation
-function getLocalhostOverrideCoords(ip) {
-  if (ip === '::1' || ip === '127.0.0.1') {
-    // Riyadh (approx. Olaya District)
-    return { lat: 24.7011, lon: 46.6835, isOverride: true };
-  }
-  return null;
-}
-
-// Utility: development-only mock IP injection for localhost
-function getDevMockIp(ip) {
-  const env = (process.env.NODE_ENV || '').toLowerCase();
-  if (env !== 'production' && (ip === '::1' || ip === '127.0.0.1')) {
-    // Prefer IPv4 for broader API compatibility; adjust here if you want IPv6 instead
-    return '120.61.4.83';
-    // Alternative IPv6 the user provided: '2001:4860:7:405::d4'
-  }
-  return null;
-}
-
-// Utility: best-effort IP geolocation enrichment for missing coordinates
-async function enrichLocationData(logEntry) {
-  try {
-    if (!logEntry || !logEntry.id || !logEntry.ip_address) return;
-    const originalIp = String(logEntry.ip_address || '').trim();
-    if (!originalIp) return;
-    const mockedIp = getDevMockIp(originalIp);
-    const ip = mockedIp || originalIp;
-    // If still localhost (no mock applied), use Riyadh override to avoid failed lookups
-    const override = getLocalhostOverrideCoords(ip);
-    if (override) {
-      const { rows } = await pool.query(
-        `UPDATE user_activity_logs SET latitude=$1, longitude=$2 WHERE id=$3 AND (latitude IS NULL OR longitude IS NULL) RETURNING id`,
-        [override.lat, override.lon, logEntry.id]
-      );
-      if (rows.length) {
-        console.log('[Enrich] Localhost override applied', { id: logEntry.id, ip, lat: override.lat, lon: override.lon });
-        return;
-      }
-      return;
-    }
-    const url = `http://ip-api.com/json/${encodeURIComponent(ip)}?fields=lat,lon`;
-    const res = await fetch(url, { method: 'GET' });
-    if (!res.ok) return;
-    const data = await res.json().catch(() => null);
-    const lat = data && typeof data.lat === 'number' ? data.lat : null;
-    const lon = data && typeof data.lon === 'number' ? data.lon : null;
-    if (lat == null || lon == null) return;
-    await pool.query(
-      `UPDATE user_activity_logs SET latitude=$1, longitude=$2 WHERE id=$3 AND (latitude IS NULL OR longitude IS NULL)`,
-      [lat, lon, logEntry.id]
-    );
-    console.log('[Enrich] IP geolocation applied', { id: logEntry.id, ip, lat, lon });
-  } catch (e) {
-    console.warn('[Enrich] failed', e && e.message);
-  }
-}
-
-async function generateSecureLicenseCode(companyId, platformId, maxCustomers) {
-  const input = `${companyId}:${platformId || 'NA'}:${maxCustomers || 0}:${LICENSE_SALT}:${Date.now()}`;
-  const hash = crypto.createHash('sha256').update(input).digest('hex');
-  const secureCode = hash.substring(0, 12).toUpperCase();
-  return secureCode;
-}
-
-// Staff location logging (Master/Operator) — records latest LOGIN location
-app.post('/api/v1/activity/location', requireStaff, async (req, res) => {
-  try {
-    const usr = req.session.user;
-    if (!usr) return res.status(401).json({ error: 'No session' });
-    const companyId = usr.companyId || null;
-    if (!companyId) return res.status(400).json({ error: 'No company bound to user' });
-    const { lat, lng, action } = req.body || {};
-    const hasLat = lat !== null && lat !== undefined && lat !== '';
-    const hasLng = lng !== null && lng !== undefined && lng !== '';
-    let latitude = null, longitude = null, hasCoords = false;
-    if (hasLat && hasLng) {
-      const la = Number(lat);
-      const lo = Number(lng);
-      if (Number.isFinite(la) && Number.isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180) {
-        latitude = la;
-        longitude = lo;
-        hasCoords = true;
-      }
-    }
-    // best-effort IP capture (with dev mock for localhost)
-    const ipRaw = (req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || '').toString();
-    const ip = getDevMockIp(ipRaw) || ipRaw;
-    console.log('[Activity] incoming', {
-      body: { lat, lng, action },
-      parsed: { hasCoords, latitude, longitude },
-      userId: usr.uid,
-      companyId,
-      ip
-    });
-    if (hasCoords) {
-      // Update latest LOGIN row with precise coords, or insert a new LOGIN if none exists
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        const { rows: updated } = await client.query(`
-          WITH last_row AS (
-            SELECT id FROM user_activity_logs
-            WHERE company_id = $1 AND user_id = $2 AND action_type = 'LOGIN'
-            ORDER BY timestamp DESC, id DESC
-            LIMIT 1
-          )
-          UPDATE user_activity_logs u
-          SET latitude = $3, longitude = $4, ip_address = COALESCE($5, u.ip_address)
-          FROM last_row
-          WHERE u.id = last_row.id
-          RETURNING u.id;
-        `, [companyId, usr.uid, latitude, longitude, ip]);
-
-        if (!updated.length) {
-          await client.query(
-            `INSERT INTO user_activity_logs (company_id, user_id, action_type, ip_address, latitude, longitude)
-             VALUES ($1,$2,'LOGIN',$3,$4,$5)`,
-            [companyId, usr.uid, ip, latitude, longitude]
-          );
-          console.log('[Activity] inserted precise coords row', { userId: usr.uid, companyId, latitude, longitude });
-        }
-        if (updated.length) console.log('[Activity] updated latest LOGIN row with coords', { updatedId: updated[0].id, userId: usr.uid, companyId, latitude, longitude });
-        await client.query('COMMIT');
-      } catch (e) {
-        await client.query('ROLLBACK');
-        throw e;
-      } finally {
-        client.release();
-      }
-    } else {
-      // No valid coords: record a LOCATION_DENIED/FAILED event without touching coords
-      try {
-        // First try to update the latest activity row of any type for this user
-        const { rows: upd } = await pool.query(
-          `WITH last_row AS (
-             SELECT id, ip_address, latitude, longitude
-             FROM user_activity_logs
-             WHERE company_id = $1 AND user_id = $2
-             ORDER BY timestamp DESC, id DESC
-             LIMIT 1
-           )
-           UPDATE user_activity_logs u
-           SET ip_address = COALESCE($3, u.ip_address)
-           FROM last_row
-           WHERE u.id = last_row.id
-           RETURNING u.id, COALESCE($3, last_row.ip_address) AS ip_address, last_row.latitude, last_row.longitude`,
-          [companyId, usr.uid, ip]
-        );
-        if (upd && upd.length) {
-          console.log('[Activity] updated latest row without coords', { userId: usr.uid, companyId, ip });
-          const row = upd[0];
-          if (row && (row.latitude == null || row.longitude == null)) {
-            setImmediate(() => enrichLocationData({ id: row.id, ip_address: row.ip_address }).catch(() => {}));
-          }
-        } else {
-          const { rows: ins } = await pool.query(
-            `INSERT INTO user_activity_logs (company_id, user_id, action_type, ip_address)
-             VALUES ($1,$2,$3,$4)
-             RETURNING id, ip_address`,
-            [companyId, usr.uid, (action || 'LOCATION_DENIED'), ip]
-          );
-          console.log('[Activity] logged without coords (new row)', { action: (action || 'LOCATION_DENIED'), userId: usr.uid, companyId, ip });
-          if (ins && ins[0] && ins[0].id) {
-            setImmediate(() => enrichLocationData({ id: ins[0].id, ip_address: ins[0].ip_address }).catch(() => {}));
-          }
-        }
-      } catch (_) {}
-    }
-    try { await pool.query('UPDATE companies SET last_activity_at = NOW() WHERE id = $1', [companyId]); } catch(_){}
-    res.json({ status: 'ok' });
-  } catch (e) {
-    console.error('Record location failed:', e);
-    res.status(500).json({ error: 'Failed to record location' });
-  }
-});
-
-// Latest Master login location per Active company for Global Monitoring
-app.get('/api/v1/all-company-locations', requireSuperAdmin, async (req, res) => {
-  try {
-    const { rows } = await pool.query(`
-      WITH latest_master AS (
-        SELECT DISTINCT ON (ual.company_id)
-          ual.company_id,
-          ual.user_id,
-          ual.latitude,
-          ual.longitude,
-          ual.timestamp
-        FROM user_activity_logs ual
-        JOIN staff_users su ON su.id = ual.user_id AND su.role = 'master'
-        WHERE ual.latitude IS NOT NULL AND ual.longitude IS NOT NULL
-        ORDER BY ual.company_id, ual.timestamp DESC
-      )
-      SELECT
-        c.id AS company_id,
-        c.company_name,
-        sp.plan_name,
-        latest_master.latitude AS lat,
-        latest_master.longitude AS lng,
-        latest_master.timestamp AS last_login
-      FROM companies c
-      LEFT JOIN company_licenses cl ON cl.company_id = c.id
-      LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id
-      LEFT JOIN latest_master ON latest_master.company_id = c.id
-      WHERE c.status = 'Active'
-      ORDER BY c.company_name ASC
-    `);
-    res.json(rows.map(r => ({
-      company_id: r.company_id,
-      company_name: r.company_name,
-      plan_name: r.plan_name || null,
-      lat: r.lat != null ? Number(r.lat) : null,
-      lng: r.lng != null ? Number(r.lng) : null,
-      last_login: r.last_login || null
-    })));
-  } catch (e) {
-    console.error('Fetch all-company-locations failed:', e);
-    res.status(500).json({ error: 'Failed to fetch global locations' });
-  }
-});
 
 // Aliases using "manage" path as requested, redirecting to the canonical routes
 app.get('/admin/control-center/manage/:companyId', requireSuperAdmin, (req, res) => {
@@ -864,29 +635,13 @@ app.get('/', (req, res) => {
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
-    const { rows } = await pool.query('SELECT id, username, password_hash, role, is_active, company_id FROM staff_users WHERE username=$1 LIMIT 1', [username]);
+    const { rows } = await pool.query('SELECT id, username, password_hash, role, is_active FROM staff_users WHERE username=$1 LIMIT 1', [username]);
     if (rows.length && rows[0].is_active !== false) {
       const u = rows[0];
       const ok = await bcrypt.compare(password, u.password_hash);
       if (ok) {
         const sessionRole = (u.role === 'master') ? 'admin' : 'operator';
-        req.session.user = { name: u.username, uid: u.id, role: sessionRole, companyId: u.company_id || null };
-        if (u.company_id) {
-          try { await pool.query('UPDATE companies SET last_activity_at = NOW() WHERE id = $1', [u.company_id]); } catch(_){ }
-          try {
-            const ipRaw = (req.headers['x-forwarded-for']?.toString().split(',')[0] || req.socket.remoteAddress || '').toString();
-            const ip = getDevMockIp(ipRaw) || ipRaw;
-            const { rows: ins } = await pool.query(
-              `INSERT INTO user_activity_logs (company_id, user_id, action_type, ip_address, latitude, longitude)
-               VALUES ($1,$2,'LOGIN',$3,NULL,NULL)
-               RETURNING id, ip_address`,
-              [u.company_id, u.id, ip]
-            );
-            if (ins && ins[0] && ins[0].id) {
-              setImmediate(() => enrichLocationData({ id: ins[0].id, ip_address: ins[0].ip_address }).catch(() => {}));
-            }
-          } catch(_){ }
-        }
+        req.session.user = { name: u.username, uid: u.id, role: sessionRole };
         return res.redirect('/admin/home');
       }
     }
@@ -1033,7 +788,7 @@ app.get('/admin/control-center', requireSuperAdmin, async (req, res) => {
       LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id
       LEFT JOIN system_instances si ON si.company_id = c.id
       ORDER BY c.company_name ASC`);
-    res.render('Admin/control_center', { user: req.session.user, activePage: 'control_center', companies: rows, mapsApiKey: process.env.GOOGLE_MAPS_API_KEY || null });
+    res.render('Admin/control_center', { user: req.session.user, activePage: 'control_center', companies: rows });
   } catch (e) {
     console.error('Control Center list failed:', e);
     res.status(500).send('Failed to load Control Center');
@@ -1045,7 +800,7 @@ app.get('/admin/control-center/company/:id', requireSuperAdmin, async (req, res)
   try {
     const [c, lic, plans, inst] = await Promise.all([
       pool.query('SELECT * FROM companies WHERE id=$1 LIMIT 1', [companyId]),
-      pool.query(`SELECT cl.*, sp.plan_name, sp.max_data_transfer_gb FROM company_licenses cl LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id WHERE company_id=$1 LIMIT 1`, [companyId]),
+      pool.query(`SELECT cl.*, sp.plan_name FROM company_licenses cl LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id WHERE company_id=$1 LIMIT 1`, [companyId]),
       pool.query('SELECT id, plan_name FROM subscription_plans ORDER BY id'),
       pool.query('SELECT * FROM system_instances WHERE company_id=$1 LIMIT 1', [companyId])
     ]);
@@ -1056,65 +811,11 @@ app.get('/admin/control-center/company/:id', requireSuperAdmin, async (req, res)
       company: c.rows[0],
       license: lic.rows[0] || null,
       plans: plans.rows,
-      instance: inst.rows[0] || null,
-      planLimitGb: (lic.rows[0] && lic.rows[0].max_data_transfer_gb) ? Number(lic.rows[0].max_data_transfer_gb) : null,
-      mapsApiKey: process.env.GOOGLE_MAPS_API_KEY || null
+      instance: inst.rows[0] || null
     });
   } catch (e) {
     console.error('Company detail failed:', e);
     res.status(500).send('Failed to load Company');
-  }
-});
-
-// Latest login locations per user for a company (Master/Operator users)
-app.get('/api/v1/user-locations/:companyId', requireSuperAdmin, async (req, res) => {
-  const companyId = Number(req.params.companyId);
-  try {
-    const { rows } = await pool.query(`
-      WITH latest AS (
-        SELECT DISTINCT ON (ual.user_id)
-          ual.id, ual.user_id, ual.latitude, ual.longitude, ual.timestamp, ual.ip_address
-        FROM user_activity_logs ual
-        WHERE ual.company_id = $1
-        ORDER BY ual.user_id, ual.timestamp DESC
-      )
-      SELECT
-        CASE
-          WHEN su.role = 'master' THEN 'Master'
-          WHEN su.role = 'operator' THEN 'Operator'
-          ELSE COALESCE(su.role, 'User')
-        END AS user_role,
-        su.username AS username,
-        latest.latitude AS lat,
-        latest.longitude AS lng,
-        latest.timestamp AS last_login,
-        latest.id AS log_id,
-        latest.ip_address AS ip_address
-      FROM latest
-      LEFT JOIN staff_users su ON su.id = latest.user_id
-    `, [companyId]);
-
-    // Trigger background enrichment for any rows lacking coords but having an IP
-    rows.forEach(r => {
-      if ((r.lat == null || r.lng == null) && r.ip_address) {
-        enrichLocationData({ id: r.log_id, ip_address: r.ip_address });
-      }
-    });
-
-    // Respond immediately; client will see enriched coords on next refresh
-    res.json(rows
-      .filter(r => r.lat != null && r.lng != null)
-      .map(r => ({
-        user_role: r.user_role,
-        username: r.username,
-        lat: Number(r.lat),
-        lng: Number(r.lng),
-        last_login: r.last_login
-      }))
-    );
-  } catch (e) {
-    console.error('Fetch user locations failed:', e);
-    res.status(500).json({ error: 'Failed to fetch user locations' });
   }
 });
 
@@ -1148,24 +849,15 @@ app.post('/admin/control-center/company/:id/license', requireSuperAdmin, async (
   try {
     await client.query('BEGIN');
     const { rows } = await client.query('SELECT id FROM company_licenses WHERE company_id=$1 LIMIT 1', [companyId]);
-    let finalLicenseCode = license_code;
     if (rows.length) {
       await client.query(`UPDATE company_licenses SET license_code=$1, udo_reference_string=$2, plan_id=$3, start_date=$4, expiry_date=$5, is_paid=$6 WHERE company_id=$7`,
         [license_code, udo_reference_string || null, plan_id || null, start_date, expiry_date, String(is_paid) === 'true', companyId]);
     } else {
-      const { rows: companyRows } = await client.query('SELECT reva_platform_id FROM companies WHERE id=$1', [companyId]);
-      const { rows: planRows } = await client.query('SELECT max_customers FROM subscription_plans WHERE id=$1', [plan_id]);
-      const platformId = companyRows[0] ? companyRows[0].reva_platform_id : null;
-      const maxCustomers = planRows[0] ? planRows[0].max_customers : 500;
-      finalLicenseCode = await generateSecureLicenseCode(companyId, platformId, maxCustomers);
-      console.log('[License] Generated new secure code:', finalLicenseCode);
-
       await client.query(`INSERT INTO company_licenses (company_id, license_code, udo_reference_string, plan_id, start_date, expiry_date, is_paid) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-        [companyId, finalLicenseCode, udo_reference_string || null, plan_id || null, start_date, expiry_date, String(is_paid) === 'true']);
+        [companyId, license_code, udo_reference_string || null, plan_id || null, start_date, expiry_date, String(is_paid) === 'true']);
     }
-    const auditCode = rows.length ? license_code : finalLicenseCode;
     await client.query(`INSERT INTO admin_audit_logs (admin_user_id, company_id, action_type, details) VALUES ($1,$2,'LICENSE_UPDATE',$3)`,
-      [req.session.user.uid, companyId, `License updated: code=${auditCode}, plan_id=${plan_id}, paid=${String(is_paid) === 'true'}`]);
+      [req.session.user.uid, companyId, `License updated: code=${license_code}, plan_id=${plan_id}, paid=${String(is_paid) === 'true'}`]);
     await client.query('COMMIT');
     res.redirect(`/admin/control-center/company/${companyId}`);
   } catch (e) {

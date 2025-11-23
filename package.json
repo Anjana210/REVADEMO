@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
+    "seed": "node seed.js",
+    "start:with-seed": "node seed.js && node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -23,7 +25,7 @@
     "fast-csv": "^5.0.5",
     "nodemailer": "^6.9.13",
     "multer": "^2.0.2",
-    "p-limit": "^3.1.0",
+    "p-limit": "^7.2.0",
     "pdf-lib": "^1.17.1",
     "pg": "^8.16.3",
     "pg-format": "^1.0.4",
