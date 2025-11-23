@@ -9,8 +9,8 @@ const archiver = require('archiver');
 const format = require('pg-format');
 const ejs = require('ejs');
 const puppeteer = require('puppeteer');
-// FIX: Corrected import for p-limit to access the default export
-const pLimit = require('p-limit').default; 
+// p-limit concurrency helper (CommonJS-compatible version)
+const pLimit = require('p-limit'); 
 
 // In-memory progress tracker for bulk ZIP jobs
 const bulkProgress = new Map();
