@@ -1380,8 +1380,6 @@ router.get('/api/company-settings', requireStaff, async (req, res) => {
 //
 // ==========================================================================
 // --- THIS IS THE CORRECTED POST ROUTE ---
-// ==========================================================================
-//
 router.post('/api/company-settings', requireWrite, logoUpload.single('logo-upload'), async (req, res) => {
     
     // Get ALL fields from the form body
@@ -1407,6 +1405,14 @@ router.post('/api/company-settings', requireWrite, logoUpload.single('logo-uploa
     try {
         await client.query('BEGIN');
         
+        // Normalize numeric fields from form inputs
+        const normalizedVatRate = (vat_rate === '' || vat_rate == null)
+            ? null
+            : Number(vat_rate);
+        const normalizedNumDevices = (number_of_devices === '' || number_of_devices == null)
+            ? null
+            : parseInt(number_of_devices, 10);
+
         // --- 🥇 POSTGRESQL UPSERT LOGIC ---
         const queryText = `
             INSERT INTO company_settings (
@@ -1441,9 +1447,9 @@ router.post('/api/company-settings', requireWrite, logoUpload.single('logo-uploa
         const queryParams = [
             company_name, logoUrl, address, city, postal_code,
             phone, email, website, about,
-            default_language, currency, vat_rate,
+            default_language, currency, normalizedVatRate,
             license_type, license_status,
-            number_of_devices, expiry_date // <-- ADD THESE TWO
+            normalizedNumDevices, expiry_date // <-- ADD THESE TWO
         ];
 
         // Execute the single UPSERT query
