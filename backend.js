@@ -1116,10 +1116,10 @@ router.get('/api/v1/user-locations/:companyId', requireStaff, async (req, res) =
     const client = await pool.connect();
     try {
         const params = [];
-        let where = 'WHERE latitude IS NOT NULL AND longitude IS NOT NULL';
+        let where = 'WHERE ual.latitude IS NOT NULL AND ual.longitude IS NOT NULL';
         if (companyId) {
-            where += ' AND company_id = $1';
-            params.push(companyId);
+        where += ' AND ual.company_id = $1';
+        params.push(companyId);
         }
 
         const { rows } = await client.query(
