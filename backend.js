@@ -1092,6 +1092,8 @@ router.post('/api/download-invoices', requireStaff, async (req, res) => {
             const state = bulkProgress.get(progressId) || { processed: totalCount, total: totalCount };
             bulkProgress.set(progressId, { ...state, done: true });
             setTimeout(() => bulkProgress.delete(progressId), 5 * 60 * 1000);
+        }
+    }
 });
 
 // Simple polling endpoint for bulk ZIP progress
@@ -1152,7 +1154,40 @@ router.get('/api/v1/user-locations/:companyId', requireStaff, async (req, res) =
         client.release();
     }
 });
+// Returns one latest login location per company, for the Global Monitoring map
+router.get('/api/v1/all-company-locations', requireStaff, async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query(`
+      SELECT DISTINCT ON (c.id)
+        c.id AS company_id,
+        c.company_name,
+        sp.plan_name,
+        ual.timestamp AS last_login,
+        ual.latitude AS lat,
+        ual.longitude AS lng
+      FROM companies c
+      LEFT JOIN user_activity_logs ual
+        ON ual.company_id = c.id
+       AND ual.latitude IS NOT NULL
+       AND ual.longitude IS NOT NULL
+      LEFT JOIN company_licenses cl
+        ON cl.company_id = c.id
+      LEFT JOIN subscription_plans sp
+        ON sp.id = cl.plan_id
+      WHERE ual.id IS NOT NULL
+      ORDER BY c.id, ual.timestamp DESC
+      LIMIT 200;
+    `);
 
+    res.json(rows);
+  } catch (e) {
+    console.error('Error fetching all company locations:', e);
+    res.status(500).json([]);
+  } finally {
+    client.release();
+  }
+});
 //=======================================================================================//
 // --- 4. NEW: DASHBOARD API ENDPOINTS ---
 //=======================================================================================//
