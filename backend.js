@@ -1412,6 +1412,9 @@ router.post('/api/company-settings', requireWrite, logoUpload.single('logo-uploa
         const normalizedNumDevices = (number_of_devices === '' || number_of_devices == null)
             ? null
             : parseInt(number_of_devices, 10);
+        const normalizedExpiryDate = (expiry_date === '' || expiry_date == null)
+            ? null
+            : expiry_date; // let Postgres parse valid date strings
 
         // --- 🥇 POSTGRESQL UPSERT LOGIC ---
         const queryText = `
@@ -1449,7 +1452,7 @@ router.post('/api/company-settings', requireWrite, logoUpload.single('logo-uploa
             phone, email, website, about,
             default_language, currency, normalizedVatRate,
             license_type, license_status,
-            normalizedNumDevices, expiry_date // <-- ADD THESE TWO
+            normalizedNumDevices, normalizedExpiryDate // <-- ADD THESE TWO
         ];
 
         // Execute the single UPSERT query
