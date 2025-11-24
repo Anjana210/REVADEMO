@@ -117,6 +117,17 @@ async function ensureControlCenterSchema() {
         is_paid BOOLEAN DEFAULT TRUE
       );`);
 
+    // customer_accounts: end-user accounts linked to companies
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS customer_accounts (
+        id SERIAL PRIMARY KEY,
+        company_id INT REFERENCES companies(id) ON DELETE CASCADE,
+        username VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        last_login_at TIMESTAMP
+      );`);
+
     // system_instances
     await client.query(`
       CREATE TABLE IF NOT EXISTS system_instances (
@@ -638,6 +649,7 @@ app.get('/', (req, res) => {
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   try {
+    // 1) Staff login (admin/operator)
     const { rows } = await pool.query('SELECT id, username, password_hash, role, is_active FROM staff_users WHERE username=$1 LIMIT 1', [username]);
     if (rows.length && rows[0].is_active !== false) {
       const u = rows[0];
@@ -646,6 +658,27 @@ app.post('/login', async (req, res) => {
         const sessionRole = (u.role === 'master') ? 'admin' : 'operator';
         req.session.user = { name: u.username, uid: u.id, role: sessionRole };
         return res.redirect('/admin/home');
+      }
+    }
+
+    // 2) Customer login (signup accounts)
+    const { rows: customerRows } = await pool.query(
+      `SELECT ca.id, ca.username, ca.password_hash, ca.company_id, c.company_name
+       FROM customer_accounts ca
+       JOIN companies c ON c.id = ca.company_id
+       WHERE ca.username=$1
+       LIMIT 1`,
+      [username]
+    );
+
+    if (customerRows.length) {
+      const cu = customerRows[0];
+      const ok = await bcrypt.compare(password, cu.password_hash);
+      if (ok) {
+        req.session.user = { name: cu.username, uid: cu.id, role: 'customer', companyId: cu.company_id };
+        // Update last_activity_at for Control Center visibility
+        await pool.query('UPDATE companies SET last_activity_at = NOW() WHERE id=$1', [cu.company_id]);
+        return res.redirect('/home');
       }
     }
   } catch (err) {
@@ -665,6 +698,85 @@ app.post('/login', async (req, res) => {
   }
 
   return res.render('Customer/login', { error: 'Invalid username or password. Please try again.' });
+});
+
+// Signup routes for creating a new demo account
+app.get('/signup', (req, res) => {
+  if (req.session.user) {
+    return res.redirect('/');
+  }
+  res.render('Customer/signup', { error: null });
+});
+
+app.post('/signup', async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password || username.trim().length < 3 || password.length < 6) {
+    return res.status(400).render('Customer/signup', { error: 'Username must be at least 3 characters and password at least 6 characters.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const cleanUsername = username.trim();
+
+    // Ensure username is unique among staff users
+    const existingStaff = await client.query('SELECT 1 FROM staff_users WHERE username=$1', [cleanUsername]);
+    if (existingStaff.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).render('Customer/signup', { error: 'This admin username is already taken. Please choose another.' });
+    }
+
+    const companyName = `DEMO (${cleanUsername})`;
+
+    // Create company for this demo admin account
+    const companyResult = await client.query(
+      `INSERT INTO companies (company_name, status, date_registered, last_activity_at)
+       VALUES ($1, 'Active', NOW(), NOW())
+       RETURNING id`,
+      [companyName]
+    );
+    const companyId = companyResult.rows[0].id;
+
+    // Attach Demo plan if it exists
+    const planResult = await client.query('SELECT id FROM subscription_plans WHERE plan_name=$1 LIMIT 1', ['Demo']);
+    if (planResult.rows.length) {
+      const planId = planResult.rows[0].id;
+      const licenseCode = `DEMO-${companyId}`;
+      await client.query(
+        `INSERT INTO company_licenses (company_id, license_code, plan_id, start_date, expiry_date, is_paid)
+         VALUES ($1,$2,$3,CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', FALSE)`,
+        [companyId, licenseCode, planId]
+      );
+    }
+
+    // Create staff admin account with hashed password
+    const hash = await bcrypt.hash(password, 12);
+    const staffResult = await client.query(
+      `INSERT INTO staff_users (username, password_hash, role, is_active)
+       VALUES ($1, $2, 'master', true)
+       RETURNING id`,
+      [cleanUsername, hash]
+    );
+
+    await client.query('COMMIT');
+
+    // Auto-login the user as admin and redirect to admin home
+    req.session.user = { name: cleanUsername, uid: staffResult.rows[0].id, role: 'admin' };
+    return res.redirect('/admin/home');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error('Signup failed:', e);
+    // If the database reports a unique violation (e.g. username already exists),
+    // surface a clear message instead of a generic error.
+    if (e && e.code === '23505') {
+      return res.status(409).render('Customer/signup', { error: 'This admin username is already taken. Please choose another.' });
+    }
+    return res.status(500).render('Customer/signup', { error: 'Failed to create your account. Please try again later.' });
+  } finally {
+    client.release();
+  }
 });
 
 // Logout Route - works for both roles
@@ -803,8 +915,8 @@ app.get('/admin/control-center/company/:id', requireSuperAdmin, async (req, res)
   try {
     const [c, lic, plans, inst] = await Promise.all([
       pool.query('SELECT * FROM companies WHERE id=$1 LIMIT 1', [companyId]),
-      pool.query(`SELECT cl.*, sp.plan_name FROM company_licenses cl LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id WHERE company_id=$1 LIMIT 1`, [companyId]),
-      pool.query('SELECT id, plan_name FROM subscription_plans ORDER BY id'),
+      pool.query(`SELECT cl.*, sp.plan_name, sp.max_data_transfer_gb FROM company_licenses cl LEFT JOIN subscription_plans sp ON sp.id = cl.plan_id WHERE company_id=$1 LIMIT 1`, [companyId]),
+      pool.query('SELECT id, plan_name, max_data_transfer_gb FROM subscription_plans ORDER BY id'),
       pool.query('SELECT * FROM system_instances WHERE company_id=$1 LIMIT 1', [companyId])
     ]);
     if (!c.rows.length) return res.status(404).send('Company not found');

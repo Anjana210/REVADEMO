@@ -185,7 +185,7 @@
             </div>
             <div>
               <div class="text-xs text-slate-500">Transfer (GB)</div>
-              <% const used = instance ? Number(instance.current_transfer_gb || 0) : 0; const limit = planLimitGb || 0; const ratio = limit ? (used/limit) : 0; const pct = Math.max(0, Math.min(100, Math.round(ratio*100))); const barColor = pct <= 50 ? 'bg-green-600' : (pct <= 80 ? 'bg-yellow-500' : 'bg-red-600'); %>
+              <% const used = instance ? Number(instance.current_transfer_gb || 0) : 0; const currentPlan = (license && Array.isArray(plans)) ? plans.find(p => p.id === license.plan_id) : null; const limit = currentPlan && currentPlan.max_data_transfer_gb != null ? Number(currentPlan.max_data_transfer_gb) : 0; const ratio = limit ? (used/limit) : 0; const pct = Math.max(0, Math.min(100, Math.round(ratio*100))); const barColor = pct <= 50 ? 'bg-green-600' : (pct <= 80 ? 'bg-yellow-500' : 'bg-red-600'); %>
               <div class="font-semibold <%= pct > 80 ? 'text-red-600' : '' %>">
                 <%= used %> / <%= limit || '—' %> GB (<%= pct %>%)
               </div>
