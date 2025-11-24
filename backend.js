@@ -1092,8 +1092,6 @@ router.post('/api/download-invoices', requireStaff, async (req, res) => {
             const state = bulkProgress.get(progressId) || { processed: totalCount, total: totalCount };
             bulkProgress.set(progressId, { ...state, done: true });
             setTimeout(() => bulkProgress.delete(progressId), 5 * 60 * 1000);
-        }
-    }
 });
 
 // Simple polling endpoint for bulk ZIP progress
@@ -1105,6 +1103,56 @@ router.get('/api/bulk-progress/:id', requireStaff, (req, res) => {
     }
     res.json(state);
 });
+
+//=======================================================================================//
+// --- 4b. USER LOCATION API FOR CONTROL CENTER MAP ---
+//=======================================================================================//
+
+// Returns recent login locations for a given company
+router.get('/api/v1/user-locations/:companyId', requireStaff, async (req, res) => {
+    const companyId = Number(req.params.companyId) || null;
+    const client = await pool.connect();
+    try {
+        const params = [];
+        let where = 'WHERE latitude IS NOT NULL AND longitude IS NOT NULL';
+        if (companyId) {
+            where += ' AND company_id = $1';
+            params.push(companyId);
+        }
+
+        const { rows } = await client.query(
+            `SELECT 
+                ual.company_id,
+                ual.user_id,
+                ual.action_type,
+                ual.timestamp AS last_login,
+                ual.ip_address,
+                ual.latitude AS lat,
+                ual.longitude AS lng,
+                COALESCE(su.username, ca.username) AS username,
+                CASE 
+                    WHEN su.id IS NOT NULL THEN su.role
+                    WHEN ca.id IS NOT NULL THEN 'customer'
+                    ELSE NULL
+                END AS user_role
+             FROM user_activity_logs ual
+             LEFT JOIN staff_users su ON su.id = ual.user_id
+             LEFT JOIN customer_accounts ca ON ca.id = ual.user_id
+             ${where}
+             ORDER BY ual.timestamp DESC
+             LIMIT 100`,
+            params
+        );
+
+        res.json(rows);
+    } catch (e) {
+        console.error('Error fetching user locations:', e);
+        res.status(500).json([]);
+    } finally {
+        client.release();
+    }
+});
+
 //=======================================================================================//
 // --- 4. NEW: DASHBOARD API ENDPOINTS ---
 //=======================================================================================//

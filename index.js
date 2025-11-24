@@ -46,6 +46,52 @@ app.use(session({
 
 const { requireAdmin, requireCustomer, requireStaff, requireMaster, requireWrite, requireSuperAdmin } = require('./middleware.js');
 
+// --- Helper: Capture client IP behind proxies (Railway, etc.) ---
+function getClientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) {
+    const parts = String(xff).split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length) return parts[0];
+  }
+  return req.socket?.remoteAddress || null;
+}
+
+// --- Helper: Log user activity (login) with optional IP-based location ---
+async function logUserLoginActivity(req, { companyId = null, userId = null, userRole = null } = {}) {
+  const client = await pool.connect();
+  const ip = getClientIp(req);
+  let lat = null;
+  let lng = null;
+
+  // Lightweight IP geolocation using ip-api.com (no key). Best-effort only.
+  if (ip && ip !== '::1' && ip !== '127.0.0.1') {
+    try {
+      const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,lat,lon,message`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.status === 'success') {
+          lat = typeof data.lat === 'number' ? data.lat : null;
+          lng = typeof data.lon === 'number' ? data.lon : null;
+        }
+      }
+    } catch (e) {
+      // Silent failure is fine; IP will still be stored
+    }
+  }
+
+  try {
+    await client.query(
+      `INSERT INTO user_activity_logs (company_id, user_id, action_type, ip_address, latitude, longitude)
+       VALUES ($1,$2,'login',$3,$4,$5)`,
+      [companyId, userId, ip || null, lat, lng]
+    );
+  } catch (e) {
+    console.error('Failed to log user activity:', e);
+  } finally {
+    client.release();
+  }
+}
+
 // --- Ensure REVA ZONE Control Center schema exists and seed initial data ---
 async function ensureControlCenterSchema() {
   const client = await pool.connect();
@@ -657,6 +703,7 @@ app.post('/login', async (req, res) => {
       if (ok) {
         const sessionRole = (u.role === 'master') ? 'admin' : 'operator';
         req.session.user = { name: u.username, uid: u.id, role: sessionRole };
+        await logUserLoginActivity(req, { companyId: null, userId: u.id, userRole: sessionRole });
         return res.redirect('/admin/home');
       }
     }
@@ -678,6 +725,7 @@ app.post('/login', async (req, res) => {
         req.session.user = { name: cu.username, uid: cu.id, role: 'customer', companyId: cu.company_id };
         // Update last_activity_at for Control Center visibility
         await pool.query('UPDATE companies SET last_activity_at = NOW() WHERE id=$1', [cu.company_id]);
+        await logUserLoginActivity(req, { companyId: cu.company_id, userId: cu.id, userRole: 'customer' });
         return res.redirect('/home');
       }
     }
@@ -688,12 +736,14 @@ app.post('/login', async (req, res) => {
   // Super Admin fallback login (not visible in UI)
   if (username === 'admin_demo' && password === 'Demo@123') {
     req.session.user = { name: 'Super Admin', uid: 0, role: 'superadmin' };
+    await logUserLoginActivity(req, { companyId: null, userId: 0, userRole: 'superadmin' });
     return res.redirect('/admin/home');
   }
 
   // Optional demo customer login retained
   if (username === 'customer_demo' && password === 'Demo@123') {
     req.session.user = { name: 'Customer User Demo', uid: 1, role: 'customer' };
+    await logUserLoginActivity(req, { companyId: null, userId: 1, userRole: 'customer' });
     return res.redirect('/home');
   }
 
